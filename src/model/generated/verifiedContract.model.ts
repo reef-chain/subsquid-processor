@@ -1,4 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_} from "typeorm"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_, ManyToOne as ManyToOne_} from "typeorm"
 import {Contract} from "./contract.model"
 import {ContractType} from "./_contractType"
 
@@ -61,4 +61,8 @@ export class VerifiedContract {
     @Index_()
     @Column_("timestamp with time zone", {nullable: true})
     timestamp!: Date | undefined | null
+
+    @Index_()
+    @Column_("bool", {nullable: true})
+    approved!: boolean | undefined | null
 }
