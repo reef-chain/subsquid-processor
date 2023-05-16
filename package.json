@@ -6,8 +6,7 @@
     "db:migrate": "npx squid-typeorm-migration apply",
     "processor:start": "node lib/processor.js",
     "query-node:start": "squid-graphql-server",
-    "lint": "eslint . --ext .ts --ignore-path .gitignore --ignore-pattern src/abi/**/*  --fix",
-    "preinstall": "npx npm-force-resolutions"
+    "lint": "eslint . --ext .ts --ignore-path .gitignore --ignore-pattern src/abi/**/*  --fix"
   },
   "dependencies": {
     "@ethersproject/abi": "^5.7.0",
@@ -42,10 +41,6 @@
     "eslint-plugin-import": "^2.24.1",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-type-graphql": "^0.3.2",
-    "npm-force-resolutions": "^0.0.10",
     "typescript": "~4.6.2"
-  },
-  "resolutions": {
-    "@subsquid/substrate-metadata": "3.0.0"
   }
 }
