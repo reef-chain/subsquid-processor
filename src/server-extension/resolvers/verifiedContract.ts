@@ -21,6 +21,7 @@ export class VerifiedContractResolver {
     @Arg('contractData') contractData: string,
     @Arg('license') license: string,
     @Arg('timestamp') timestamp: number,
+    @Arg('approved') approved: boolean,
   ): Promise<Boolean> {
     const manager = await this.tx();
 
@@ -46,7 +47,7 @@ export class VerifiedContractResolver {
       contractData: JSON.parse(contractData),
       license,
       timestamp: new Date(timestamp),
-      approved: false,
+      approved,
     });
 
     await manager.save(verifiedContract);
