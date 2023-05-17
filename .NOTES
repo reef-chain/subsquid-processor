@@ -52,3 +52,30 @@ make archive-down
 
 - Stop subsquid db:
 make down
+
+
+# Squids in production
+
+## Deploy
+
+- Mainnet
+sqd deploy . -m squid-mainnet.yaml -u
+
+- Testnet
+sqd deploy . -m squid-testnet.yaml -u
+
+## View logs
+
+- Mainnet
+sqd logs reef-explorer@v7 -f
+
+- Testnet
+sqd logs reef-explorer-testnet@v3 -f
+
+## View deployed versions
+
+- Mainnet
+sqd ls -n reef-explorer
+
+- Testnet
+sqd ls -n reef-explorer-testnet

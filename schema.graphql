@@ -180,6 +180,7 @@ type VerifiedContract @entity @index(fields: ["contract", "type"], unique: true)
   contractData: JSON
   license: String
   timestamp: DateTime @index
+  approved: Boolean @index
 }
 
 # ===================== Staking ===========================
