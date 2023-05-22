@@ -123,6 +123,26 @@ It is possible to extend `squid-graphql-server(1)` with custom
 [type-graphql](https://typegraphql.com) resolvers and to add request validation.
 More details will be added later.
 
+## Deployment
+
+### Deploy a Squid
+
+* To deploy a Squid execute `sqd deploy -m <path_to_manifest_file>`.
+* By default, when a Squid is deployed, the processor performs an update of all accounts and token holders when head block is reached. This is shortens the indexing time for new Squids. However, if we are redeploying an existing Squid, we can disable this behavior setting the environment variable `HEAD_REACHED=true`.
+
+### Import verified contracts
+
+The data related with verified contract comes from an off-chain source, so when a new Squid is deployed this data has to be imported. 
+
+The [ReefScan API](https://github.com/reef-chain/reefscan-api) stores all the verified contracts and provides an end point to update the data related with verified contracts in the **prod version** of Reef Explorer Squid. This end point is protected by a password and is meant to be called after a new Squid has been deployed and the head block has been reached.
+
+**URL** : `<reefscan_api_base_url>/verification/verify-from-backup`
+
+**Method** : `POST`
+
+**Request body**: `{ password: <admin_pass> }`
+
+
 ## Disclaimer
 
 This is alpha-quality software. Expect some bugs and incompatible changes in coming weeks.
