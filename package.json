@@ -12,7 +12,7 @@
     "@ethersproject/abi": "^5.7.0",
     "@subsquid/archive-registry": "2.1.13",
     "@subsquid/cli": "2.2.2",
-    "@subsquid/graphql-server": "3.3.2",
+    "@subsquid/graphql-server": "3.3.0",
     "@subsquid/ss58": "0.1.4",
     "@subsquid/substrate-processor": "2.4.1",
     "@subsquid/typeorm-migration": "0.1.6",
