@@ -16,6 +16,18 @@ deploy:
         mainnet
       HEAD_REACHED:
         false
+      PUSHER_ENABLED:
+        true
+      PUSHER_APP_ID:
+        1629403
+      PUSHER_KEY:
+        fc5ad78eb31981de6c67
+      PUSHER_CLUSTER:
+        eu
+      PUSHER_CHANNEL:
+        reef-chain
+      PUSHER_EVENT:
+        block-finalised
     cmd: [ "node", "lib/processor" ]
   api:
     env:
@@ -31,6 +43,7 @@ deploy:
     - INFURA_IPFS_PROJECT_ID
     - INFURA_IPFS_KEY
     - APIKEY_REEF_BRIDGE
+    - PUSHER_SECRET
 
 scale:
   dedicated: true
