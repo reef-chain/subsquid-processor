@@ -27,7 +27,7 @@ if (!network) {
 
 const RPC_URL = process.env[`NODE_RPC_WS_${network.toUpperCase()}`];
 const AQUARIUM_ARCHIVE_NAME = process.env[`ARCHIVE_LOOKUP_NAME_${network.toUpperCase()}`] as KnownArchives;
-console.log('NETWORK=',network, ' RPC=', RPC_URL, ' AQUARIUM_ARCHIVE_NAME=', AQUARIUM_ARCHIVE_NAME);
+console.log('\nNETWORK=',network, ' RPC=', RPC_URL, ' AQUARIUM_ARCHIVE_NAME=', AQUARIUM_ARCHIVE_NAME);
 const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME);
 const START_BLOCK = parseInt(process.env.START_BLOCK || '0');
 const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
@@ -41,7 +41,7 @@ const processor = new SubstrateBatchProcessor()
   .includeAllBlocks(); // Force the processor to fetch the header data for all the blocks (by default, the processor fetches the block data only for all blocks that contain log items it was subscribed to)
 
 let pusher: Pusher;
-if (process.env.PUSHER_ENABLED !== 'false' && PUSHER_CHANNEL && PUSHER_EVENT) {
+if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
   pusher = new Pusher({
     appId: process.env.PUSHER_APP_ID!,
     key: process.env.PUSHER_KEY!,
@@ -49,7 +49,9 @@ if (process.env.PUSHER_ENABLED !== 'false' && PUSHER_CHANNEL && PUSHER_EVENT) {
     cluster: process.env.PUSHER_CLUSTER || "eu",
     useTLS: true
   });
-  console.log('Pusher enabled');
+  console.log('Pusher enabled\n');
+} else {
+  console.log('Pusher disabled\n');
 }
 
 export type Item = BatchProcessorItem<typeof processor>;
