@@ -16,7 +16,7 @@ deploy:
       HEAD_REACHED:
         false
       PUSHER_ENABLED:
-        true
+        false
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:
@@ -26,7 +26,7 @@ deploy:
       PUSHER_CHANNEL:
         reef-chain
       PUSHER_EVENT:
-        block-finalised
+        block-finalised-testnet
     cmd: [ "node", "lib/processor" ]
   api:
     env:
