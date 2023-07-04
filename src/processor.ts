@@ -18,6 +18,7 @@ import { fetchModules, hexToNativeAddress, MetadataModule, REEF_CONTRACT_ADDRESS
 import { KnownArchives, lookupArchive } from "@subsquid/archive-registry";
 import { Account, Extrinsic, VerifiedContract } from "./model";
 import { updateFromHead } from "./process/updateFromHead";
+import Pusher from "pusher";
 
 const network = process.env.NETWORK;
 if (!network) {
@@ -29,6 +30,8 @@ const AQUARIUM_ARCHIVE_NAME = process.env[`ARCHIVE_LOOKUP_NAME_${network.toUpper
 console.log('NETWORK=',network, ' RPC=', RPC_URL, ' AQUARIUM_ARCHIVE_NAME=', AQUARIUM_ARCHIVE_NAME);
 const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME);
 const START_BLOCK = parseInt(process.env.START_BLOCK || '0');
+const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
+const PUSHER_EVENT = process.env.PUSHER_EVENT;
 
 const database = new TypeormDatabase();
 const processor = new SubstrateBatchProcessor()
@@ -36,6 +39,18 @@ const processor = new SubstrateBatchProcessor()
   .setDataSource({ chain: RPC_URL, archive: ARCHIVE })
   .addEvent("*")
   .includeAllBlocks(); // Force the processor to fetch the header data for all the blocks (by default, the processor fetches the block data only for all blocks that contain log items it was subscribed to)
+
+let pusher: Pusher;
+if (process.env.PUSHER_ENABLED !== 'false' && PUSHER_CHANNEL && PUSHER_EVENT) {
+  pusher = new Pusher({
+    appId: process.env.PUSHER_APP_ID!,
+    key: process.env.PUSHER_KEY!,
+    secret: process.env.PUSHER_SECRET!,
+    cluster: process.env.PUSHER_CLUSTER || "eu",
+    useTLS: true
+  });
+  console.log('Pusher enabled');
+}
 
 export type Item = BatchProcessorItem<typeof processor>;
 export type Context = BatchContext<Store, Item>;
@@ -169,4 +184,18 @@ processor.run(database, async (ctx_) => {
   await transferManager.save(blocks, extrinsics, accounts, events);
   await tokenHolderManager.save(accounts);
   await stakingManager.save(accounts, events);
+
+  // Push list of updated accounts
+  if (pusher) {
+    const lastBlockHeader = ctx.blocks[ctx.blocks.length - 1].header;
+    pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, {
+      message: {
+        blockHeight: lastBlockHeader.height,
+        blockId: lastBlockHeader.id,
+        blockHash: lastBlockHeader.hash,
+        updatedAccounts: Array.from(accounts.keys()),
+      }
+    });
+  }
+
 });
