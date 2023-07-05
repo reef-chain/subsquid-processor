@@ -191,12 +191,11 @@ processor.run(database, async (ctx_) => {
   if (pusher) {
     const lastBlockHeader = ctx.blocks[ctx.blocks.length - 1].header;
     pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, {
-      message: {
-        blockHeight: lastBlockHeader.height,
-        blockId: lastBlockHeader.id,
-        blockHash: lastBlockHeader.hash,
-        updatedAccounts: Array.from(accounts.keys()),
-      }
+      blockHeight: lastBlockHeader.height,
+      blockId: lastBlockHeader.id,
+      blockHash: lastBlockHeader.hash,
+      updatedNativeAddresses: Array.from(accounts.keys()),
+      updatedEvmAddresses: Array.from(accounts.values()).map(a => a.evmAddress)
     });
   }
 
