@@ -15,12 +15,12 @@ import { Not } from "typeorm";
 export class AccountManager {  
     accountsData: Map<string, AccountData> = new Map();
     tokenHolderManager: TokenHolderManager;
-    tranferManager: TransferManager;
+    transferManager: TransferManager;
     claimedEvmAddresses: string[] = [];
 
     constructor(tokenHolderManager: TokenHolderManager, transferManager: TransferManager) {
         this.tokenHolderManager = tokenHolderManager;
-        this.tranferManager = transferManager;
+        this.transferManager = transferManager;
     }
   
     async process(address: string, blockHeader: SubstrateBlock, active = true, evmClaim = false): Promise<AccountData> {
@@ -88,7 +88,7 @@ export class AccountManager {
         });
 
         // Update transfers in memory
-        this.tranferManager.transfersData.forEach(transferData => {
+        this.transferManager.transfersData.forEach(transferData => {
             if (transferData.toEvmAddress === evmAddress) {
                 transferData.toAddress = nativeAddress;
             } else if (transferData.fromEvmAddress === evmAddress) {
@@ -164,7 +164,7 @@ export class AccountManager {
         });
 
         // Update transfers in memory
-        this.tranferManager.transfersData.forEach(transferData => {
+        this.transferManager.transfersData.forEach(transferData => {
             if (transferData.toAddress === nativeAddress) {
                 if (transferData.token.id === REEF_CONTRACT_ADDRESS) {
                     transferData.toEvmAddress = "";
