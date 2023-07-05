@@ -1,22 +1,24 @@
 manifestVersion: subsquid.io/v0.1
-name: reef-explorer-testnet
-version: 3
+name: reef-testnet
+version: 1
 description: |-
-  Reef Chain testnet explorer data
+  Reef Testnet Chain explorer data
 
 build:
 
 deploy:
   addons:
     postgres:
+      version:
+        14
   processor:
     env:
       NETWORK:
         testnet
       HEAD_REACHED:
-        false
+        true
       PUSHER_ENABLED:
-        false
+        true
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:
@@ -31,8 +33,10 @@ deploy:
   api:
     env:
       SQUID_NAME:
-        reef-explorer-testnet
-    cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
+        reef-testnet
+    cmd: [ "npx", "squid-graphql-server", "--max-root-fields", "15", "--max-response-size", "1000"]
+  migrate:
+    cmd: [ "npx", "squid-typeorm-migration", "apply" ]
   secrets:
     - NODE_RPC_WS_MAINNET
     - NODE_RPC_WS_TESTNET
@@ -43,32 +47,3 @@ deploy:
     - INFURA_IPFS_KEY
     - APIKEY_REEF_BRIDGE
     - PUSHER_SECRET
-
-scale:
-  dedicated: true
-  addons:
-    postgres:
-      storage: 100Gi
-      profile: large
-  processor:
-    profile: large
-    
-#
-#deploy:
-#  addons:
-#    postgres:
-  # the set of secrets that must be set and provided by Aquarium
-#  secrets:
-#    - ACALA_RPC_ENDPOINT
-#    - COINGECKO_API_KEY
-#  processor:
-#    # additional env variables
-#    environment:
-#      SQD_DEBUG=sqd:mapping
-#    env:
-#      # env variables from a file
-#      - .deploy.env
-#    cmd: [ "node", "lib/processor" ]
-#  api:
-#    # custom run command for the GraphQL server
-#    cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "10", "--sql-statement-timeout", "1000" ]
