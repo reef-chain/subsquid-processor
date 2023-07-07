@@ -190,12 +190,22 @@ processor.run(database, async (ctx_) => {
   // Push list of updated accounts
   if (pusher) {
     const lastBlockHeader = ctx.blocks[ctx.blocks.length - 1].header;
+    const updatedNativeAccounts = [
+      ...Array.from(accounts.keys()), 
+      ...Array.from(tokenHolderManager.updatedEoaAccounts.keys())
+    ];
+    const updatedEvmAccounts = [
+      ...Array.from(accounts.values()).map(a => a.evmAddress),
+      ...Array.from(tokenHolderManager.updatedEoaAccounts.values())
+    ];
+    
     pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, {
       blockHeight: lastBlockHeader.height,
       blockId: lastBlockHeader.id,
       blockHash: lastBlockHeader.hash,
-      updatedNativeAddresses: Array.from(accounts.keys()),
-      updatedEvmAddresses: Array.from(accounts.values()).map(a => a.evmAddress)
+      updatedNativeAccounts: updatedNativeAccounts,
+      updatedEvmAccounts: updatedEvmAccounts,
+      updatedContracts: [...new Set(evmEventManager.evmEventsData.map(e => e.contractAddress))],
     });
   }
 
