@@ -194,8 +194,9 @@ processor.run(database, async (ctx_) => {
       blockHeight: lastBlockHeader.height,
       blockId: lastBlockHeader.id,
       blockHash: lastBlockHeader.hash,
-      updatedNativeAddresses: Array.from(accounts.keys()),
-      updatedEvmAddresses: Array.from(accounts.values()).map(a => a.evmAddress)
+      updatedNativeAccounts: Array.from(accounts.keys()),
+      updatedEvmAccounts: Array.from(accounts.values()).map(a => a.evmAddress),
+      updatedContracts: [...new Set(evmEventManager.evmEventsData.map(e => e.contractAddress))],
     });
   }
 
