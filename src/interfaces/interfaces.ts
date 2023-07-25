@@ -205,3 +205,16 @@ export interface IdentityData {
     twitter: string;
     web: string;
 }
+
+export interface PusherData {
+    blockHeight: number;
+    blockId: string;
+    blockHash: string;
+    updatedAccounts: {
+        REEF20Transfers: string[];
+        REEF721Transfers: string[];
+        REEF1155Transfers: string[];
+        boundEvm: string[];
+    },
+    updatedContracts: string[];
+};

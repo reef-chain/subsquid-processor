@@ -16,7 +16,8 @@ export class AccountManager {
     accountsData: Map<string, AccountData> = new Map();
     tokenHolderManager: TokenHolderManager;
     transferManager: TransferManager;
-    claimedEvmAddresses: string[] = [];
+    allClaimedEvmNativeAddresses: Set<string> = new Set();
+    newClaimedEvmAddresses: string[] = [];
 
     constructor(tokenHolderManager: TokenHolderManager, transferManager: TransferManager) {
         this.tokenHolderManager = tokenHolderManager;
@@ -61,7 +62,7 @@ export class AccountManager {
     
         await ctx.store.save([...accounts.values()]);
         
-        for (const evmAddress of this.claimedEvmAddresses) {
+        for (const evmAddress of this.newClaimedEvmAddresses) {
             const account = [...accounts.values()].find(account => account.evmAddress === evmAddress);
             if (!account) { 
                 ctx.log.error(`ERROR updating token holders and transfers: Account with EVM address ${evmAddress} not found`);
@@ -96,10 +97,11 @@ export class AccountManager {
             }
         });
 
+        this.allClaimedEvmNativeAddresses.add(nativeAddress);
         const account = await ctx.store.get(Account, nativeAddress);
         if (!account) {
             // Account does not exist in DB, so we update token holders and transfers after saving the account
-            this.claimedEvmAddresses.push(evmAddress);
+            this.newClaimedEvmAddresses.push(evmAddress);
             return;
         }
     

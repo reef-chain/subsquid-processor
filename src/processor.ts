@@ -4,7 +4,7 @@ import {
   BatchProcessorItem,
   SubstrateBatchProcessor,
 } from "@subsquid/substrate-processor";
-import { EventRaw } from "./interfaces/interfaces";
+import { EventRaw, PusherData } from "./interfaces/interfaces";
 import { AccountManager } from "./process/accountManager";
 import { BlockManager } from "./process/blockManager";
 import { ExtrinsicManager } from "./process/extrinsicManager";
@@ -16,7 +16,7 @@ import { TokenHolderManager } from "./process/tokenHolderManager";
 import { StakingManager } from "./process/stakingManager";
 import { fetchModules, hexToNativeAddress, MetadataModule, REEF_CONTRACT_ADDRESS } from "./util/util";
 import { KnownArchives, lookupArchive } from "@subsquid/archive-registry";
-import { Account, Extrinsic, VerifiedContract } from "./model";
+import { Account, Extrinsic, PusherMessage, VerifiedContract } from "./model";
 import { updateFromHead } from "./process/updateFromHead";
 import Pusher from "pusher";
 
@@ -188,25 +188,48 @@ processor.run(database, async (ctx_) => {
   await stakingManager.save(accounts, events);
 
   // Push list of updated accounts
-  if (pusher) {
+  if (pusher && headReached) {
     const lastBlockHeader = ctx.blocks[ctx.blocks.length - 1].header;
-    const updatedNativeAccounts = [
-      ...Array.from(accounts.keys()), 
-      ...Array.from(tokenHolderManager.updatedEoaAccounts.keys())
-    ];
-    const updatedEvmAccounts = [
-      ...Array.from(accounts.values()).map(a => a.evmAddress),
-      ...Array.from(tokenHolderManager.updatedEoaAccounts.values())
-    ];
-    
-    pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, {
+    const updatedErc20Accounts = Array.from(tokenHolderManager.tokenHoldersData.values())
+      .filter(t => t.token.type === 'ERC20' && t.signerAddress !== '').map(t => t.signerAddress as string);
+    const updatedErc721Accounts = Array.from(tokenHolderManager.tokenHoldersData.values())
+      .filter(t => t.token.type === 'ERC721' && t.signerAddress !== '').map(t => t.signerAddress as string);
+    const updatedErc1155Accounts = Array.from(tokenHolderManager.tokenHoldersData.values())
+      .filter(t => t.token.type === 'ERC1155' && t.signerAddress !== '').map(t => t.signerAddress as string);
+    const data: PusherData = {
       blockHeight: lastBlockHeader.height,
       blockId: lastBlockHeader.id,
       blockHash: lastBlockHeader.hash,
-      updatedNativeAccounts: updatedNativeAccounts,
-      updatedEvmAccounts: updatedEvmAccounts,
+      updatedAccounts: {
+        REEF20Transfers: updatedErc20Accounts,
+        REEF721Transfers: updatedErc721Accounts,
+        REEF1155Transfers: updatedErc1155Accounts,
+        boundEvm: Array.from(accountManager.allClaimedEvmNativeAddresses),
+      },
       updatedContracts: [...new Set(evmEventManager.evmEventsData.map(e => e.contractAddress))],
+    };
+    pushMessage(data);
+  }
+  
+});
+
+async function pushMessage(data: PusherData) {
+  try {
+    await pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
+  } catch (e) {
+    ctx.log.error(`Pusher error: ${e}`);
+    const messagesToDelete = await ctx.store.find(PusherMessage, { order: { id: 'DESC' }, skip: 2 });
+    if (messagesToDelete.length) {
+      await ctx.store.remove(messagesToDelete);
+    }
+    ctx.store.save(new PusherMessage({ id: data.blockId, data: JSON.stringify(data) })).then(() => {
+      ctx.log.info(`Pusher message for block ${data.blockId} saved to database.`);
+      pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, {
+        blockHeight: data.blockHeight,
+        blockId: data.blockId,
+        blockHash: data.blockHash,
+        error: true
+      });
     });
   }
-
-});
+}
