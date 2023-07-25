@@ -4,8 +4,6 @@ import { ctx } from "../processor";
 
 export class TokenHolderManager {  
     tokenHoldersData: Map<string, TokenHolderData> = new Map();
-    // Keep track of updated EOA accounts to emit Pusher event
-    updatedEoaAccounts: Map<string, string> = new Map();
   
     process(
         address: string, 
@@ -16,9 +14,6 @@ export class TokenHolderManager {
         nftId: number|null = null
     ) {
         const holderIsContract = address === '0x';
-        if (!holderIsContract) {
-            this.updatedEoaAccounts.set(address, evmAddress);
-        }
 
         const tokenHolderData: TokenHolderData = {
             id: `${token.id}-${holderIsContract ? evmAddress : address}${nftId ? `-${nftId}` : ''}`,
@@ -50,9 +45,6 @@ export class TokenHolderManager {
                         ctx.log.error(`ERROR saving token holder: Account ${tokenHolderData.signerAddress} not found`);
                         continue;
                     }
-                } else {
-                    // We only want to keep accounts that are not already cached in `accounts`
-                    this.updatedEoaAccounts.delete(tokenHolderData.signerAddress);
                 }
             }
     
