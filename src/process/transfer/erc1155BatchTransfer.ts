@@ -27,7 +27,9 @@ export const processErc1155BatchTransfer = async (
             try {
                 const uri = await new erc1155.Contract(ctx, blockHeader, tokenAddress).uri(ids[i]);
                 pinToIPFS(uri.replace('{id}', ids[i].toString().padStart(64, '0')));
-            } catch (e) {}
+            } catch (e) {
+                ctx.log.error(`Failed to pin to IPFS: ${e}`);
+            }
         }
     }
 

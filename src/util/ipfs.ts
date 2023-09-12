@@ -27,7 +27,13 @@ export const pinToIPFS = async (uri: string) => {
         chunks.push(chunk);
     }
     const metadata = concat(chunks);
-    const decodedMetadata = JSON.parse(new TextDecoder().decode(metadata).toString());
+    let decodedMetadata;
+    try {
+        decodedMetadata = JSON.parse(new TextDecoder().decode(metadata).toString());
+    } catch (e) { 
+        // Not a JSON
+    }
+
     if (decodedMetadata?.image) {
         if (!decodedMetadata.image.startsWith('ipfs://')) return;
         ipfs.pin.add(decodedMetadata.image.replace('ipfs://', '')).then((res: any) => {

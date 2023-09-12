@@ -49,9 +49,9 @@ if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
     cluster: process.env.PUSHER_CLUSTER || "eu",
     useTLS: true
   });
-  console.log('Pusher enabled\n');
+  console.log('Pusher enabled: true');
 } else {
-  console.log('Pusher disabled\n');
+  console.log('Pusher enabled: false');
 }
 
 export type Item = BatchProcessorItem<typeof processor>;
@@ -63,6 +63,8 @@ export let ctx: Context;
 export let modules: MetadataModule[];
 export let headReached = process.env.HEAD_REACHED === 'true'; // default to false
 export const pinToIPFSEnabled = process.env.PIN_TO_IPFS !== 'false'; // default to true
+console.log(`Head reached: ${headReached}`);
+console.log(`Pin to IPFS: ${pinToIPFSEnabled}`);
 
 // Avoid type errors when serializing BigInts
 (BigInt.prototype as any).toJSON = function () { return this.toString(); };
