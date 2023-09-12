@@ -25,7 +25,9 @@ export const processErc721Transfer = async (
         try {
             const uri = await new erc721.Contract(ctx, blockHeader, tokenAddress).tokenURI(tokenId);
             pinToIPFS(uri);
-        } catch (e) {}
+        } catch (e) {
+            ctx.log.error(`Failed to pin to IPFS: ${e}`);
+        }
     }
 
     const toAddress = await findNativeAddress(blockHeader, to);

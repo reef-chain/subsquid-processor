@@ -25,7 +25,9 @@ export const processErc1155SingleTransfer = async (
         try {
             const uri = await new erc1155.Contract(ctx, blockHeader, tokenAddress).uri(id);
             pinToIPFS(uri.replace('{id}', id.toString().padStart(64, '0')));
-        } catch (e) {}
+        } catch (e) {
+            ctx.log.error(`Failed to pin to IPFS: ${e}`);
+        }
     }
 
     const toAddress = await findNativeAddress(blockHeader, to);

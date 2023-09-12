@@ -194,6 +194,14 @@ type Staking @entity {
   timestamp: DateTime!
 }
 
+# ===================== Pusher ============================
+
+type PusherMessage @entity {
+  "Block ID"
+  id: ID!
+  data: String!
+}
+
 # ===================== Enums =============================
 
 enum EvmEventType {
