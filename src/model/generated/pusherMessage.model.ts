@@ -7,7 +7,7 @@ export class PusherMessage {
     }
 
     /**
-     * Block height
+     * Block ID
      */
     @PrimaryColumn_()
     id!: string

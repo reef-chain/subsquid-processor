@@ -26,7 +26,7 @@ type Extrinsic @entity @index(fields: ["timestamp", "id"], unique: true) @index(
   id: ID!
   block: Block!
   index: Int! @index
-  hash: String! @index @unique
+  hash: String! @index
   args: JSON!
   docs: String!
   method: String! @index

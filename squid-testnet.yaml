@@ -17,6 +17,8 @@ deploy:
         testnet
       HEAD_REACHED:
         true
+      PIN_TO_IPFS:
+        false
       PUSHER_ENABLED:
         true
       PUSHER_APP_ID:
