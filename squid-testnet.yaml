@@ -44,6 +44,7 @@ deploy:
     - INFURA_IPFS_PROJECT_ID
     - INFURA_IPFS_KEY
     - APIKEY_REEF_BRIDGE
+    - PUSHER_SECRET
 
 scale:
   dedicated: true
