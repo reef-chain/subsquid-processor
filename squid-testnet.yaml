@@ -1,44 +1,26 @@
 manifestVersion: subsquid.io/v0.1
-name: reef-testnet
-version: 1
+name: reef-explorer-testnet
+version: 4
 description: |-
-  Reef Testnet Chain explorer data
+  Reef Chain testnet explorer data
 
 build:
 
 deploy:
   addons:
     postgres:
-      version:
-        14
   processor:
     env:
       NETWORK:
         testnet
       HEAD_REACHED:
         true
-      PIN_TO_IPFS:
-        false
-      PUSHER_ENABLED:
-        true
-      PUSHER_APP_ID:
-        1629403
-      PUSHER_KEY:
-        fc5ad78eb31981de6c67
-      PUSHER_CLUSTER:
-        eu
-      PUSHER_CHANNEL:
-        reef-chain
-      PUSHER_EVENT:
-        block-finalised-testnet
     cmd: [ "node", "lib/processor" ]
   api:
     env:
       SQUID_NAME:
-        reef-testnet
-    cmd: [ "npx", "squid-graphql-server", "--max-root-fields", "15", "--max-response-size", "1000"]
-  migrate:
-    cmd: [ "npx", "squid-typeorm-migration", "apply" ]
+        reef-explorer-testnet
+    cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
   secrets:
     - NODE_RPC_WS_MAINNET
     - NODE_RPC_WS_TESTNET
@@ -49,3 +31,10 @@ deploy:
     - INFURA_IPFS_KEY
     - APIKEY_REEF_BRIDGE
     - PUSHER_SECRET
+
+scale:
+  dedicated: false
+  addons:
+    postgres:
+      storage: 100Gi
+      profile: medium

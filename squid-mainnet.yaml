@@ -1,16 +1,14 @@
 manifestVersion: subsquid.io/v0.1
-name: reef
-version: 3
+name: reef-explorer
+version: 7
 description: |-
-  Reef Mainnet Chain explorer data
+  Reef Chain explorer data
 
 build:
 
 deploy:
   addons:
     postgres:
-      version:
-        14
   processor:
     env:
       NETWORK:
@@ -18,7 +16,7 @@ deploy:
       HEAD_REACHED:
         true
       PIN_TO_IPFS:
-        false
+        true
       PUSHER_ENABLED:
         true
       PUSHER_APP_ID:
@@ -35,10 +33,8 @@ deploy:
   api:
     env:
       SQUID_NAME:
-        reef
-    cmd: [ "npx", "squid-graphql-server", "--max-root-fields", "15", "--max-response-size", "1000"]
-  migrate:
-    cmd: [ "npx", "squid-typeorm-migration", "apply" ]
+        reef-explorer
+    cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
   secrets:
     - NODE_RPC_WS_MAINNET
     - NODE_RPC_WS_TESTNET
@@ -49,3 +45,9 @@ deploy:
     - INFURA_IPFS_KEY
     - APIKEY_REEF_BRIDGE
     - PUSHER_SECRET
+
+scale:
+  dedicated: true
+  addons:
+    postgres:
+      storage: 100Gi

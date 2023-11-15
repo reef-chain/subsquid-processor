@@ -70,9 +70,15 @@ console.log(`Pin to IPFS: ${pinToIPFSEnabled}`);
 (BigInt.prototype as any).toJSON = function () { return this.toString(); };
 
 let isFirstBatch = true;
+let pusherData: PusherData;
 
 processor.run(database, async (ctx_) => {
   ctx = ctx_;
+
+  // Push data from previous batch
+  if (pusher && pusherData) {
+    pushMessage(pusherData);
+  }
 
   // Initialize global variables in first batch
   if (isFirstBatch) {
@@ -189,16 +195,24 @@ processor.run(database, async (ctx_) => {
   await tokenHolderManager.save(accounts);
   await stakingManager.save(accounts, events);
 
-  // Push list of updated accounts
+  // Update list of updated accounts for pusher
   if (pusher && headReached) {
     const lastBlockHeader = ctx.blocks[ctx.blocks.length - 1].header;
+    
     const updatedErc20Accounts = Array.from(tokenHolderManager.tokenHoldersData.values())
-      .filter(t => t.token.type === 'ERC20' && t.signerAddress !== '').map(t => t.signerAddress as string);
+      .filter(t => t.token.type === 'ERC20' && t.signerAddress !== '')
+      .map(t => t.signerAddress as string)
+      .filter((value, index, array) => array.indexOf(value) === index);
     const updatedErc721Accounts = Array.from(tokenHolderManager.tokenHoldersData.values())
-      .filter(t => t.token.type === 'ERC721' && t.signerAddress !== '').map(t => t.signerAddress as string);
+      .filter(t => t.token.type === 'ERC721' && t.signerAddress !== '')
+      .map(t => t.signerAddress as string)
+      .filter((value, index, array) => array.indexOf(value) === index);
     const updatedErc1155Accounts = Array.from(tokenHolderManager.tokenHoldersData.values())
-      .filter(t => t.token.type === 'ERC1155' && t.signerAddress !== '').map(t => t.signerAddress as string);
-    const data: PusherData = {
+      .filter(t => t.token.type === 'ERC1155' && t.signerAddress !== '')
+      .map(t => t.signerAddress as string)
+      .filter((value, index, array) => array.indexOf(value) === index);
+
+    pusherData = {
       blockHeight: lastBlockHeader.height,
       blockId: lastBlockHeader.id,
       blockHash: lastBlockHeader.hash,
@@ -210,7 +224,6 @@ processor.run(database, async (ctx_) => {
       },
       updatedContracts: [...new Set(evmEventManager.evmEventsData.map(e => e.contractAddress))],
     };
-    pushMessage(data);
   }
   
 });
