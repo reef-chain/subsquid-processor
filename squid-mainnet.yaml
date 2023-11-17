@@ -34,6 +34,18 @@ deploy:
     env:
       SQUID_NAME:
         reef-explorer
+      PUSHER_ENABLED:
+        true
+      PUSHER_APP_ID:
+        1629403
+      PUSHER_KEY:
+        fc5ad78eb31981de6c67
+      PUSHER_CLUSTER:
+        eu
+      PUSHER_CHANNEL:
+        reef-chain
+      PUSHER_EVENT:
+        block-finalised
     cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
   secrets:
     - NODE_RPC_WS_MAINNET
