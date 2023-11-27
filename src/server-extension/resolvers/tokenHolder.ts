@@ -116,6 +116,13 @@ export class TokenHolderResolver {
         .map(t => t.signer!.id as string)
         .filter((value, index, array) => array.indexOf(value) === index);
       
+      if (!updatedErc20Accounts.length 
+        && !updatedErc721Accounts.length 
+        && !updatedErc1155Accounts.length
+      ) {
+        return true;
+      }
+      
       const data: PusherData = {
         blockHeight: -1,
         blockId: '',

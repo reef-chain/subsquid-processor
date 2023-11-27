@@ -229,6 +229,15 @@ processor.run(database, async (ctx_) => {
 });
 
 async function pushMessage(data: PusherData) {
+  if (!data.updatedContracts.length 
+    && !data.updatedAccounts.REEF20Transfers.length 
+    && !data.updatedAccounts.REEF721Transfers.length 
+    && !data.updatedAccounts.REEF1155Transfers.length 
+    && !data.updatedAccounts.boundEvm.length
+  ) {
+    return;
+  }
+
   try {
     await pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
   } catch (e) {
