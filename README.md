@@ -102,9 +102,24 @@ It is necessary to import the respective ABI definition to decode EVM logs. For 
 To generate a type-safe facade class to decode EVM logs, use `squid-evm-typegen(1)`:
 
 ```bash
-npx squid-evm-typegen --abi src/abi/ERC721.json --output src/abi/erc721.ts
+npx squid-evm-typegen src/abi src/abi/ERC721.json
 ```
 
+And replace the following code in generated the generated `abi.support.ts` file:
+
+```ts
+let result = await this._chain.client.call('eth_call', [
+      { to: this.address, data },
+      '0x'+this.blockHeight.toString(16)
+])
+```
+by
+
+```ts
+let result = await this._chain.client.call('evm_call', [
+      {to: this.address, data, from: undefined, storageLimit: 0}
+])
+```
 
 ## Project conventions
 

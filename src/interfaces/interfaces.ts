@@ -1,5 +1,5 @@
-import { JsonFragment } from "@ethersproject/abi";
-import { QualifiedName, SubstrateEvent, SubstrateExtrinsicSignature } from "@subsquid/substrate-processor"
+// import { JsonFragment } from "@ethersproject/abi";
+// import { QualifiedName, SubstrateEvent, SubstrateExtrinsicSignature } from "@subsquid/substrate-processor"
 import { EvmEventStatus, EvmEventType, ExtrinsicStatus, ExtrinsicType, StakingType, TokenHolderType, TransferType, VerifiedContract } from "../model"
 
 interface Fee {
@@ -138,52 +138,52 @@ export interface StakingData {
     timestamp: Date;
 }
   
-export interface ExtrinsicRaw {
-    id: string
-    indexInBlock: number
-    call: Call
-    signature: SubstrateExtrinsicSignature
-    version: number
-    success: boolean
-    hash: string
-    pos: number
-    error?: any
-}
+// export interface ExtrinsicRaw {
+//     id: string
+//     indexInBlock: number
+//     call: Call
+//     signature: SubstrateExtrinsicSignature
+//     version: number
+//     success: boolean
+//     hash: string
+//     pos: number
+//     error?: any
+// }
 
-export interface EventRaw {
-    id: string
-    indexInBlock: number
-    extrinsic: ExtrinsicRaw
-    phase: SubstrateEvent["phase"]
-    name: QualifiedName
-    args: any
-    pos: number
-    call?: Call
-}
+// export interface EventRaw {
+//     id: string
+//     indexInBlock: number
+//     extrinsic: ExtrinsicRaw
+//     phase: SubstrateEvent["phase"]
+//     name: QualifiedName
+//     args: any
+//     pos: number
+//     call?: Call
+// }
   
-export interface Call {
-    id: string
-    name: QualifiedName
-    args: any
-    origin: CallOrigin
-    pos: number
-    success: boolean
-    error?: any
-}
+// export interface Call {
+//     id: string
+//     name: QualifiedName
+//     args: any
+//     origin: CallOrigin
+//     pos: number
+//     success: boolean
+//     error?: any
+// }
   
-export interface CallOrigin {
-    __kind: string
-    value: {__kind: string} & any
-}
+// export interface CallOrigin {
+//     __kind: string
+//     value: {__kind: string} & any
+// }
   
 export type TokenType = 'ERC20' | 'ERC721' | 'ERC1155';
 
 
-export type ABI = JsonFragment[];
+// export type ABI = JsonFragment[];
 
-export interface ABIS {
-    [name: string]: ABI;
-}
+// export interface ABIS {
+//     [name: string]: ABI;
+// }
 
 export interface ERC721Data {
     name: string;

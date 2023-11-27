@@ -1,7 +1,7 @@
-import { SubstrateBlock } from "@subsquid/substrate-processor";
+import { Event } from "@subsquid/substrate-processor";
+import { TransferData } from "../interfaces/interfaces";
+import { Account, Block, ContractType, Event as EventModel, Extrinsic, Transfer, VerifiedContract } from "../model";
 import { AccountManager } from "./accountManager";
-import { EventRaw, TransferData } from "../interfaces/interfaces";
-import { Account, Block, ContractType, Event, Extrinsic, Transfer, VerifiedContract } from "../model";
 import * as erc20 from "../abi/ERC20";
 import * as erc721 from "../abi/ERC721";
 import * as erc1155 from "../abi/ERC1155";
@@ -11,7 +11,7 @@ import { processErc1155SingleTransfer } from "../process/transfer/erc1155SingleT
 import { processErc1155BatchTransfer } from "../process/transfer/erc1155BatchTransfer";
 import { processNativeTransfer } from "./transfer/nativeTransfer";
 import { TokenHolderManager } from "./tokenHolderManager";
-import { ctx } from "../processor";
+import { ctx, Fields } from "../processor";
 
 export class TransferManager {  
     transfersData: TransferData[] = [];
@@ -22,35 +22,34 @@ export class TransferManager {
     }
   
     async process(
-        eventRaw: EventRaw, 
-        blockHeader: SubstrateBlock, 
+        event: Event<Fields>, 
         accountManager: AccountManager,
         contract: VerifiedContract,
         feeAmount: bigint,
         isNative: boolean = false
     ) {
         if (isNative) {
-            this.transfersData.push(await processNativeTransfer(eventRaw, blockHeader, contract, feeAmount, accountManager));
+            this.transfersData.push(await processNativeTransfer(event, contract, feeAmount, accountManager));
             return;
         }
 
-        switch (eventRaw.args.topics[0]) {
+        switch (event.args.topics[0]) {
             case erc20.events.Transfer.topic:
                 if (contract.type !== ContractType.ERC20) break;
-                const erc20Transfer = await processErc20Transfer(eventRaw, blockHeader, contract, feeAmount, accountManager, this.tokenHolderManager);
+                const erc20Transfer = await processErc20Transfer(event, contract, feeAmount, accountManager, this.tokenHolderManager);
                 if (erc20Transfer) this.transfersData.push(erc20Transfer);
                 break;
             case erc721.events.Transfer.topic:
                 if (contract.type !== ContractType.ERC721) break;
-                this.transfersData.push(await processErc721Transfer(eventRaw, blockHeader, contract, feeAmount, accountManager, this.tokenHolderManager));
+                this.transfersData.push(await processErc721Transfer(event, contract, feeAmount, accountManager, this.tokenHolderManager));
                 break;
             case erc1155.events.TransferSingle.topic:
                 if (contract.type !== ContractType.ERC1155) break;
-                this.transfersData.push(await processErc1155SingleTransfer(eventRaw, blockHeader, contract, feeAmount, accountManager, this.tokenHolderManager));
+                this.transfersData.push(await processErc1155SingleTransfer(event, contract, feeAmount, accountManager, this.tokenHolderManager));
                 break;
             case erc1155.events.TransferBatch.topic:
                 if (contract.type !== ContractType.ERC1155) break;
-                this.transfersData.push(...await processErc1155BatchTransfer(eventRaw, blockHeader, contract, feeAmount, accountManager, this.tokenHolderManager));
+                this.transfersData.push(...await processErc1155BatchTransfer(event, contract, feeAmount, accountManager, this.tokenHolderManager));
                 break;
         }
     }
@@ -59,7 +58,7 @@ export class TransferManager {
         blocks: Map<string, Block>, 
         extrinsics: Map<string, Extrinsic>,
         accounts: Map<string, Account>,
-        events: Map<string, Event>
+        events: Map<string, EventModel>
     ) {
         const transfers: Transfer[] = [];
 

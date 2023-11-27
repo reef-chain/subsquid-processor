@@ -1,37 +1,48 @@
-import { encodeExtrinsic, ExtrinsicSignature } from '@subsquid/substrate-metadata'
-import { SubstrateExtrinsic, toHex } from '@subsquid/substrate-processor'
-import { ctx } from '../processor'
+// import { encodeExtrinsic, ExtrinsicSignature } from '@subsquid/substrate-metadata'
+import { Event, toHex } from '@subsquid/substrate-processor'
+import { Extrinsic } from "@subsquid/substrate-runtime";
+import { ctx, Fields } from '../processor'
 
 /**
  * Encode "archived" extrinsic back to hex from SubstrateBatchProcessor mapping handler
  */
-const encodeSubstrateExtrinsic = (ex: SubstrateExtrinsic): string => {
-    let {scaleCodec, jsonCodec} = (ctx._chain as any)
+// const encodeSubstrateExtrinsic = (ex: SubstrateExtrinsic): string => {
+const encodeSubstrateExtrinsic = (event: Event<Fields>): string => {
+    // let {scaleCodec, jsonCodec} = (ctx._chain as any)
 
-    let signature: ExtrinsicSignature | undefined
-    if (ex.signature) {
-        signature = jsonCodec.decode(ctx._chain.description.signature, ex.signature)
+    // let signature: ExtrinsicSignature | undefined
+    // if (ex.signature) {
+    //     signature = jsonCodec.decode(ctx._chain.description.signature, ex.signature)
+    // }
+
+    // let [pallet, callName] = ex.call.name.split('.')
+
+    // let call = jsonCodec.decode(ctx._chain.description.call, {
+    //     __kind: pallet,
+    //     value: {
+    //         ...ex.call.args,
+    //         __kind: callName
+    //     }
+    // })
+
+    // let bytes = encodeExtrinsic(
+    //     {
+    //         version: ex.version,
+    //         signature,
+    //         call
+    //     },
+    //     ctx._chain.description,
+    //     scaleCodec
+    // )
+
+    const extrinsic: Extrinsic = {
+        version: event.extrinsic!.version,
+        signature: event.extrinsic!.signature,
+        call: event.extrinsic!.call!.args
     }
+    // TODO check this
 
-    let [pallet, callName] = ex.call.name.split('.')
-
-    let call = jsonCodec.decode(ctx._chain.description.call, {
-        __kind: pallet,
-        value: {
-            ...ex.call.args,
-            __kind: callName
-        }
-    })
-
-    let bytes = encodeExtrinsic(
-        {
-            version: ex.version,
-            signature,
-            call
-        },
-        ctx._chain.description,
-        scaleCodec
-    )
+    const bytes = event.block._runtime.encodeExtrinsic(extrinsic);
 
     return toHex(bytes)
 }
@@ -44,17 +55,17 @@ const encodeSubstrateExtrinsic = (ex: SubstrateExtrinsic): string => {
  * Note, that when TransactionPayment.TransactionFeePaid event is available,
  * fee info will be already filled on SubstrateExtrinsic.
  */
-export const getFeeDetails = async (ex: SubstrateExtrinsic, parentBlockHash: string): Promise<any> => {
-    return ctx._chain.client.call('payment_queryFeeDetails', [
-        encodeSubstrateExtrinsic(ex),
+export const getFeeDetails = async (event: Event<Fields>, parentBlockHash: string): Promise<any> => {
+    return ctx._chain.rpc.call('payment_queryFeeDetails', [
+        encodeSubstrateExtrinsic(event),
         parentBlockHash
     ])
 }
 
 
-export const getPaymentInfo = async (ex: SubstrateExtrinsic, parentBlockHash: string): Promise<any> => {
-    return ctx._chain.client.call('payment_queryInfo', [
-        encodeSubstrateExtrinsic(ex),
+export const getPaymentInfo = async (event: Event<Fields>, parentBlockHash: string): Promise<any> => {
+    return ctx._chain.rpc.call('payment_queryInfo', [
+        encodeSubstrateExtrinsic(event),
         parentBlockHash
     ])
 }

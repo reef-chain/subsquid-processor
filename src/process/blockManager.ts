@@ -1,12 +1,12 @@
-import { SubstrateBlock } from "@subsquid/substrate-processor";
+import { BlockHeader } from "@subsquid/substrate-processor";
 import { Block } from "../model";
-import { ctx } from "../processor";
+import { Fields, ctx } from "../processor";
 import { hexToNativeAddress } from "../util/util";
 
 export class BlockManager {  
     blocks: Map<string, Block> = new Map();
   
-    process(blockHeader: SubstrateBlock) {
+    process(blockHeader: BlockHeader<Fields>) {
         const block = new Block ({
             id: blockHeader.id,
             height: blockHeader.height,
@@ -15,8 +15,8 @@ export class BlockManager {
             stateRoot: blockHeader.stateRoot,
             parentHash: blockHeader.parentHash,
             extrinsicRoot: blockHeader.extrinsicsRoot,
-            finalized: true, // For now, the Squid archive only returns finalized blocks
-            timestamp: new Date(blockHeader.timestamp),
+            finalized: false,
+            timestamp: new Date(blockHeader.timestamp!),
             processorTimestamp: new Date(),
         });
 

@@ -1,16 +1,15 @@
-import { SubstrateBlock } from "@subsquid/substrate-processor";
+import { Not } from "typeorm";
+import * as ss58 from '@subsquid/ss58';
 import { AccountData } from "../interfaces/interfaces";
 import { Account, Block, TokenHolder, TokenHolderType, Transfer } from "../model";
-import { ctx, emptyAccount, headReached, reefVerifiedContract } from "../processor";
-import { EvmAccountsEvmAddressesStorage, EVMAccountsStorage, IdentityIdentityOfStorage } from "../types/storage";
-import { bufferToString, extractIdentity, REEF_CONTRACT_ADDRESS, toChecksumAddress } from "../util/util";
+import { Fields, ctx, emptyAccount, headReached, reefVerifiedContract } from "../processor";
+import { evmAccounts, evm, identity } from "../types/storage";
+import { extractIdentity, REEF_CONTRACT_ADDRESS, toChecksumAddress } from "../util/util";
 import { TokenHolderManager } from "./tokenHolderManager";
-import * as ss58 from '@subsquid/ss58';
-import { ethers } from "ethers";
 import { getBalancesAccount } from "../util/balances/balances";
 import { AccountBalances } from "../util/balances/types";
 import { TransferManager } from "./transferManager";
-import { Not } from "typeorm";
+import { BlockHeader } from "@subsquid/substrate-processor";
 
 export class AccountManager {  
     accountsData: Map<string, AccountData> = new Map();
@@ -24,7 +23,12 @@ export class AccountManager {
         this.transferManager = transferManager;
     }
   
-    async process(address: string, blockHeader: SubstrateBlock, active = true, evmClaim = false): Promise<AccountData> {
+    async process(
+        address: string,
+        blockHeader: BlockHeader<Fields>,
+        active = true,
+        evmClaim = false
+    ): Promise<AccountData> {
         let accountData = this.accountsData.get(address);
         
         if (!active) { await this.updateOnKilledAccount(address); }
@@ -33,7 +37,7 @@ export class AccountManager {
         if (!accountData || accountData.blockHeight < blockHeader.height) {
             accountData = await this.getAccountData(address, blockHeader, active);
             this.accountsData.set(address, accountData);
-            this.tokenHolderManager.process(address, '', accountData.freeBalance, blockHeader.timestamp, reefVerifiedContract);
+            this.tokenHolderManager.process(address, '', accountData.freeBalance, blockHeader.timestamp!, reefVerifiedContract);
         } else if (!active) { // If account already exists and is killed, we update the active flag
             accountData.active = false;
             this.accountsData.set(address, accountData);
@@ -224,7 +228,7 @@ export class AccountManager {
         await ctx.store.save(transfersFrom);
     }
   
-    private async getAccountData(address: string, blockHeader: SubstrateBlock, active: boolean): Promise<AccountData> {
+    private async getAccountData(address: string, blockHeader: BlockHeader<Fields>, active: boolean): Promise<AccountData> {
         let evmAddr = '';
         let identity = null;
         let balances: AccountBalances = {
@@ -238,7 +242,7 @@ export class AccountManager {
         };
         let evmNonce = 0;
 
-        const addressBytes = ss58.decode(address).bytes;
+        const addressBytes = ss58.decode(address).bytes; // TODO ??
         if (headReached) {
             // We start updating balances and identity only after the head block has been reached
             let evmAddress;
@@ -271,20 +275,17 @@ export class AccountManager {
             nonce: balances.accountNonce,
             evmNonce: evmNonce,
             blockHeight: blockHeader.height,
-            timestamp: new Date(blockHeader.timestamp),
+            timestamp: new Date(blockHeader.timestamp!),
             blockId: blockHeader.id,
         };
     }
 
-    private async getEvmAddress(blockHeader: SubstrateBlock, address: Uint8Array) {
-        const storage = new EvmAccountsEvmAddressesStorage(ctx, blockHeader);
-
-        if (!storage.isExists) return undefined;
-        
-        if (storage.isV5) {
-            return storage.asV5.get(address).then(
-                (res: Uint8Array | undefined) => {
-                    return res ? bufferToString(res as Buffer): res 
+    private async getEvmAddress(blockHeader: BlockHeader<Fields>, address: string) {
+        const storageV5 = evmAccounts.evmAddresses.v5;
+        if (storageV5.is(blockHeader)) {
+            return storageV5.get(blockHeader, address).then(
+                (res: string | undefined) => {
+                    return res;
                 }
             );
         } else {
@@ -292,29 +293,22 @@ export class AccountManager {
         }
     }
 
-    private async getIdentity(blockHeader: SubstrateBlock, address: Uint8Array) {
-        const storage = new IdentityIdentityOfStorage(ctx, blockHeader);
-
-        if (!storage.isExists) return undefined;
-        
-        if (storage.isV5) {
-            const identityRaw = await storage.asV5.get(address);
+    private async getIdentity(blockHeader: BlockHeader<Fields>, address: string) {
+        const storageV5 = identity.identityOf.v5;
+        if (storageV5.is(blockHeader)) {
+            const identityRaw = await storageV5.get(blockHeader, address);
             return extractIdentity(identityRaw);
         } else {
             throw new Error("Unknown storage version");
         }
     }
 
-    private async getEvmNonce(blockHeader: SubstrateBlock, evmAddress: string) {
+    private async getEvmNonce(blockHeader: BlockHeader<Fields>, evmAddress: string) {
         if (evmAddress === '') return 0;
 
-        const evmAddressBytes = ethers.utils.arrayify(evmAddress);
-        const storage = new EVMAccountsStorage(ctx, blockHeader);
-
-        if (!storage.isExists) {
-            return 0;
-        } else if (storage.isV5) {
-            const accountInfo = await storage.asV5.get(evmAddressBytes);
+        const storageV5 = evm.accounts.v5;
+        if (storageV5.is(blockHeader)) {
+            const accountInfo = await storageV5.get(blockHeader, evmAddress);
             return accountInfo?.nonce || 0;
         } else {
             throw new Error("Unknown storage version");

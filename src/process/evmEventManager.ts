@@ -1,58 +1,57 @@
-import { SubstrateBlock } from "@subsquid/substrate-processor";
+import { Event } from "@subsquid/substrate-processor";
 import { Store } from "@subsquid/typeorm-store";
 import { AccountManager } from "./accountManager";
-import { ABIS, EventRaw, EvmEventData } from "../interfaces/interfaces";
-import { Block, Event, EvmEvent, EvmEventStatus, EvmEventType, VerifiedContract } from "../model";
+import { EvmEventData } from "../interfaces/interfaces";
+import { Block, Event as EventModel, EvmEvent, EvmEventStatus, EvmEventType, VerifiedContract } from "../model";
 import { toChecksumAddress } from "../util/util";
 import { TransferManager } from "./transferManager";
 import { ethers } from "ethers";
-import { ctx } from "../processor";
+import { ctx, Fields } from "../processor";
 
 export class EvmEventManager {  
     evmEventsData: EvmEventData[] = [];
   
     async process(
-        eventRaw: EventRaw, 
-        blockHeader: SubstrateBlock,
+        event: Event<Fields>, 
         feeAmount: bigint,
         transferManager: TransferManager,
         accountManager: AccountManager,
         store?: Store
     ) {
-        const method = eventRaw.name.split('.')[1];
+        const method = event.name.split('.')[1];
 
         let contractAddress;
         let status;
         let type = EvmEventType.Unverified;
-        let dataParsed = {};
+        let dataParsed: any = {};
         let topic0, topic1, topic2, topic3 = null;
 
         if (method === 'Log') {
             status = EvmEventStatus.Success;
-            topic0 = eventRaw.args.topics[0] || null;
-            topic1 = eventRaw.args.topics[1] || null;
-            topic2 = eventRaw.args.topics[2] || null;
-            topic3 = eventRaw.args.topics[3] || null;
-            contractAddress = toChecksumAddress(eventRaw.args.address);
+            topic0 = event.args.topics[0] || null;
+            topic1 = event.args.topics[1] || null;
+            topic2 = event.args.topics[2] || null;
+            topic3 = event.args.topics[3] || null;
+            contractAddress = toChecksumAddress(event.args.address);
             const contract = await store!.get(VerifiedContract, contractAddress);
             if (contract) {
-                const iface = new ethers.utils.Interface((contract.compiledData as ABIS)[contract.name]);
-                const topics = eventRaw.args.topics;
-                const data = eventRaw.args.data;
+                const iface = new ethers.Interface(contract.compiledData as ethers.InterfaceAbi);
+                const topics = event.args.topics;
+                const data = event.args.data;
                 dataParsed = iface.parseLog({ topics, data });
                 type = EvmEventType.Verified;
-                await transferManager.process(eventRaw, blockHeader, accountManager, contract, feeAmount);
+                await transferManager.process(event, accountManager, contract, feeAmount);
             }
         } else if (method === 'ExecutedFailed') {
             status = EvmEventStatus.Error;
-            contractAddress = toChecksumAddress(eventRaw.args > 3 ? eventRaw.args[1] : eventRaw.args[0]);
+            contractAddress = toChecksumAddress(event.args > 3 ? event.args[1] : event.args[0]);
             let decodedMessage = "";
-            let eventDataHex = eventRaw.args[eventRaw.args.length - 2];
+            let eventDataHex = event.args[event.args.length - 2];
             if (!(typeof eventDataHex === 'string')) {
-                eventDataHex = eventRaw.args[eventRaw.args.length - 1];
+                eventDataHex = event.args[event.args.length - 1];
             }
             try {
-                decodedMessage = ethers.utils.toUtf8String(`0x${eventDataHex.substr(138)}`.replace(/0+$/, ''));
+                decodedMessage = ethers.toUtf8String(`0x${eventDataHex.substr(138)}`.replace(/0+$/, ''));
             } catch (e) {}
             dataParsed = { message: decodedMessage };
         } else {
@@ -60,12 +59,12 @@ export class EvmEventManager {
         }
 
         const evmEventData = {
-            id: eventRaw.id,
-            blockId: blockHeader.id,
-            eventIndex: eventRaw.indexInBlock,
-            extrinsicIndex: eventRaw.extrinsic.indexInBlock,
+            id: event.id,
+            blockId: event.block.id,
+            eventIndex: event.index,
+            extrinsicIndex: event.extrinsic!.index,
             contractAddress: contractAddress,
-            dataRaw: eventRaw.args,
+            dataRaw: event.args,
             dataParsed: dataParsed,
             method: method,
             type: type,
@@ -79,7 +78,7 @@ export class EvmEventManager {
         this.evmEventsData.push(evmEventData);
     }
   
-    async save(blocks: Map<string, Block>, events: Map<string, Event>) {
+    async save(blocks: Map<string, Block>, events: Map<string, EventModel>) {
         const evmLogEvents: EvmEvent[] = this.evmEventsData.map(evmLogEventData => {
             const block = blocks.get(evmLogEventData.blockId);
             if (!block) {

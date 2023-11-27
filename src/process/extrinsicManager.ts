@@ -1,24 +1,23 @@
-import { SubstrateBlock } from "@subsquid/substrate-processor";
-import { ExtrinsicData, ExtrinsicRaw } from "../interfaces/interfaces";
+import { Event } from "@subsquid/substrate-processor";
+import { ExtrinsicData } from "../interfaces/interfaces";
 import { Block, Extrinsic, ExtrinsicStatus, ExtrinsicType } from "../model";
-import { ctx } from "../processor";
+import { Fields, ctx } from "../processor";
 import { getFeeDetails, getPaymentInfo } from "../util/extrinsic";
-import { getErrorMessage, hexToNativeAddress, toCamelCase } from "../util/util";
-import * as eac from '@subsquid/substrate-metadata/lib/events-and-calls'
+import { getDocs, getErrorMessage, hexToNativeAddress, toCamelCase } from "../util/util";
 
 export class ExtrinsicManager {  
     extrinsicsData: Map<string, ExtrinsicData> = new Map();
   
-    async process(extrinsicRaw: ExtrinsicRaw, blockHeader: SubstrateBlock): Promise<bigint> {
-        if (this.extrinsicsData.has(extrinsicRaw.id)) return BigInt(0);
+    async process(event: Event<Fields>): Promise<bigint> {
+        if (this.extrinsicsData.has(event.extrinsic!.id)) return BigInt(0);
 
         let signer = "";
         let signedData = null;
-        if (extrinsicRaw.signature?.address?.value) {
-            signer = hexToNativeAddress(extrinsicRaw.signature.address.value);
+        if (event.extrinsic?.signature?.address) {
+            signer = hexToNativeAddress(event.extrinsic!.signature!.address as string);
             const [fee, feeDetails] = await Promise.all([
-                getPaymentInfo(extrinsicRaw, blockHeader.parentHash),
-                getFeeDetails(extrinsicRaw, blockHeader.parentHash)
+                getPaymentInfo(event, event.block.parentHash),
+                getFeeDetails(event, event.block.parentHash)
             ]);
             fee.partialFee = fee.partialFee && BigInt(fee.partialFee) || BigInt(0);
             feeDetails.inclusionFee.baseFee = feeDetails.inclusionFee?.baseFee && BigInt(feeDetails.inclusionFee.baseFee) || BigInt(0);
@@ -27,29 +26,32 @@ export class ExtrinsicManager {
             signedData = { fee, feeDetails };
         }
             
-        const section = extrinsicRaw.call.name.split(".")[0];
+        const [section, method] = event.extrinsic!.call!.name.split(".");
+
         let errorMessage = "";
-        if (extrinsicRaw.error) {
-            errorMessage = getErrorMessage(extrinsicRaw.error, section);
+        if (event.extrinsic?.error) {
+            errorMessage = getErrorMessage(event.block._runtime, event.extrinsic!.error, section);
         }
 
-        const calls = new eac.Registry(ctx._chain.description.types, ctx._chain.description.call);
+        const docs = getDocs(event.block._runtime, section, method);
+
+        event.block._runtime
 
         const extrinsicData = {
-            id: extrinsicRaw.id,
-            blockId: blockHeader.id,
-            index: extrinsicRaw.indexInBlock,
-            hash: extrinsicRaw.hash,
-            args: extrinsicRaw.call.args ? Object.keys(extrinsicRaw.call.args).map(key => extrinsicRaw.call.args[key]) : [],
-            docs: calls.definitions[extrinsicRaw.call.name].docs?.toString() || "",
-            method: toCamelCase(extrinsicRaw.call.name.split(".")[1]),
+            id: event.extrinsic!.id,
+            blockId: event.block.id,
+            index: event.extrinsic!.index,
+            hash: event.extrinsic!.hash,
+            args: event.extrinsic!.call!.args ? Object.keys(event.extrinsic!.call!.args).map(key => event.extrinsic!.call!.args[key]) : [],
+            docs: docs,
+            method: toCamelCase(method),
             section: section,
             signer: signer,
-            status: extrinsicRaw.success ? ExtrinsicStatus.success : ExtrinsicStatus.error,
+            status: event.extrinsic!.success ? ExtrinsicStatus.success : ExtrinsicStatus.error,
             errorMessage: errorMessage,
             type: signer ? ExtrinsicType.signed : ExtrinsicType.unsigned,
             signedData: signedData,
-            timestamp: new Date(blockHeader.timestamp),
+            timestamp: new Date(event.block.timestamp!),
         };
 
         this.extrinsicsData.set(extrinsicData.id, extrinsicData);

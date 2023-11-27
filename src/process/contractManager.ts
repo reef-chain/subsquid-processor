@@ -1,37 +1,36 @@
-import { SubstrateBlock } from "@subsquid/substrate-processor";
-import { ContractData, EventRaw } from "../interfaces/interfaces";
+import { Event } from "@subsquid/substrate-processor";
+import { ContractData } from "../interfaces/interfaces";
 import { Account, Contract, Extrinsic } from "../model";
-import { ctx } from "../processor";
+import { ctx, Fields } from "../processor";
 import { hexToNativeAddress, toChecksumAddress } from "../util/util";
 
 export class ContractManager {  
     contractsData: ContractData[] = [];
   
-    async process(eventRaw: EventRaw, blockHeader: SubstrateBlock) {
-        if (eventRaw.call?.name !== 'EVM.create') return;
+    async process(event: Event<Fields>) {
+        if (event.call?.name !== 'EVM.create') return;
 
-        const address = typeof eventRaw.args === 'string'
-            ? toChecksumAddress(eventRaw.args) // v8
-            : toChecksumAddress(eventRaw.args[1]); // v9
+        const address = typeof event.args === 'string'
+            ? toChecksumAddress(event.args) // v8
+            : toChecksumAddress(event.args[1]); // v9
 
-        // TODO: check why we are getting duplicates
         if (this.contractsData.find(c => c.id === address)) return;
         const existingContract = await ctx.store.get(Contract, address);
         if (existingContract) return;
 
-        const bytecode = eventRaw.call.args.init;
+        const bytecode = event.call.args.init;
         const { context, args } = this.preprocessBytecode(bytecode);
     
         const contractData = {
             id: toChecksumAddress(address),
-            extrinsicId: eventRaw.extrinsic.id,
-            signerAddress: hexToNativeAddress(eventRaw.extrinsic.signature.address.value),
+            extrinsicId: event.extrinsic!.id,
+            signerAddress: hexToNativeAddress(event.extrinsic!.signature!.address as string),
             bytecode: bytecode,
             bytecodeContext: context,
             bytecodeArguments: args,
-            gasLimit: eventRaw.call!.args.gasLimit,
-            storageLimit: eventRaw.call!.args.storageLimit,
-            timestamp: new Date(blockHeader.timestamp)
+            gasLimit: event.call!.args.gasLimit,
+            storageLimit: event.call!.args.storageLimit,
+            timestamp: new Date(event.block.timestamp!)
         };
 
         this.contractsData.push(contractData);

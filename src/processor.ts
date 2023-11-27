@@ -1,10 +1,9 @@
 import { Store, TypeormDatabase } from "@subsquid/typeorm-store";
-import {
-  BatchContext,
-  BatchProcessorItem,
-  SubstrateBatchProcessor,
-} from "@subsquid/substrate-processor";
-import { EventRaw, PusherData } from "./interfaces/interfaces";
+import { DataHandlerContext, SubstrateBatchProcessor } from "@subsquid/substrate-processor";
+import { KnownArchives, lookupArchive } from "@subsquid/archive-registry";
+import Pusher from "pusher";
+import { MoreThanOrEqual, In } from "typeorm";
+import { PusherData } from "./interfaces/interfaces";
 import { AccountManager } from "./process/accountManager";
 import { BlockManager } from "./process/blockManager";
 import { ExtrinsicManager } from "./process/extrinsicManager";
@@ -14,11 +13,9 @@ import { EvmEventManager } from "./process/evmEventManager";
 import { TransferManager } from "./process/transferManager";
 import { TokenHolderManager } from "./process/tokenHolderManager";
 import { StakingManager } from "./process/stakingManager";
-import { fetchModules, hexToNativeAddress, MetadataModule, REEF_CONTRACT_ADDRESS } from "./util/util";
-import { KnownArchives, lookupArchive } from "@subsquid/archive-registry";
-import { Account, Extrinsic, PusherMessage, VerifiedContract } from "./model";
 import { updateFromHead } from "./process/updateFromHead";
-import Pusher from "pusher";
+import { hexToNativeAddress, REEF_CONTRACT_ADDRESS } from "./util/util";
+import { Account, Block, Event, EvmEvent, Extrinsic, PusherMessage, Staking, Transfer, VerifiedContract } from "./model";
 
 const network = process.env.NETWORK;
 if (!network) {
@@ -28,17 +25,40 @@ if (!network) {
 const RPC_URL = process.env[`NODE_RPC_WS_${network.toUpperCase()}`];
 const AQUARIUM_ARCHIVE_NAME = process.env[`ARCHIVE_LOOKUP_NAME_${network.toUpperCase()}`] as KnownArchives;
 console.log('\nNETWORK=',network, ' RPC=', RPC_URL, ' AQUARIUM_ARCHIVE_NAME=', AQUARIUM_ARCHIVE_NAME);
-const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME);
+const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME, { release: 'ArrowSquid' });
 const START_BLOCK = parseInt(process.env.START_BLOCK || '0');
 const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
 const PUSHER_EVENT = process.env.PUSHER_EVENT;
 
 const database = new TypeormDatabase();
+const fields = {
+  event: {
+    phase: true,
+  },
+  extrinsic: {
+    signature: true,
+    success: true,
+    error: true,
+    hash: true,
+    version: true,
+    call: true
+  },
+  block: {
+    timestamp: true,
+    stateRoot: true,
+    extrinsicsRoot: true,
+    validator: true,
+    _runtime: true,
+  }
+};
+export type Fields = typeof fields;
+
 const processor = new SubstrateBatchProcessor()
   .setBlockRange({ from: START_BLOCK })
-  .setDataSource({ chain: RPC_URL, archive: ARCHIVE })
-  .addEvent("*")
-  .includeAllBlocks(); // Force the processor to fetch the header data for all the blocks (by default, the processor fetches the block data only for all blocks that contain log items it was subscribed to)
+  .setDataSource({ chain: { url: RPC_URL!, rateLimit: 10 }, archive: ARCHIVE })
+  .addEvent({}) // Process all events
+  .includeAllBlocks() // Force the processor to fetch the header data for all the blocks
+  .setFields(fields);
 
 let pusher: Pusher;
 if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
@@ -54,13 +74,11 @@ if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
   console.log('Pusher enabled: false');
 }
 
-export type Item = BatchProcessorItem<typeof processor>;
-export type Context = BatchContext<Store, Item>;
 export let reefVerifiedContract: VerifiedContract;
 export let emptyAccount: Account;
 export let emptyExtrinsic: Extrinsic;
-export let ctx: Context;
-export let modules: MetadataModule[];
+export let ctx: DataHandlerContext<Store, Fields>;
+// export let modules: MetadataModule[];
 export let headReached = process.env.HEAD_REACHED === 'true'; // default to false
 export const pinToIPFSEnabled = process.env.PIN_TO_IPFS !== 'false'; // default to true
 console.log(`Head reached: ${headReached}`);
@@ -71,6 +89,8 @@ console.log(`Pin to IPFS: ${pinToIPFSEnabled}`);
 
 let isFirstBatch = true;
 let pusherData: PusherData;
+let latestBlockHeight = 0;
+let firstInvalidBlockHeight = 0;
 
 processor.run(database, async (ctx_) => {
   ctx = ctx_;
@@ -103,12 +123,12 @@ processor.run(database, async (ctx_) => {
       throw new Error('Empty extrinsic not found in the database');
     }
 
-    const modules_ = await fetchModules(ctx.blocks[0].header);
-    if (modules_.length) {
-      modules = modules_;
-    } else {
-      throw new Error('Metadata modules not found');
-    }
+    // const modules_ = await fetchModules(ctx.blocks[0].header);
+    // if (modules_.length) {
+    //   modules = modules_;
+    // } else {
+    //   throw new Error('Metadata modules not found');
+    // }
 
     isFirstBatch = false;
   }
@@ -126,6 +146,11 @@ processor.run(database, async (ctx_) => {
 
   // Process blocks
   for (const block of ctx.blocks) {
+    if (block.header.height <= latestBlockHeight && firstInvalidBlockHeight !== 0) {
+      // A previously unfinalized block was not valid. This block and all subsequent blocks have to be deleted from the database.
+      firstInvalidBlockHeight = block.header.height;
+    }
+
     if (!headReached && ctx.isHead) {
       headReached = true;
       await updateFromHead(block.header)
@@ -135,52 +160,55 @@ processor.run(database, async (ctx_) => {
 
     ctx.log.debug(`Processing block ${block.header.height}`);
 
-    for (const item of block.items as any) {
-      if (item.kind === "event" && item.event.phase === "ApplyExtrinsic") {
-        const eventRaw = item.event as EventRaw;
+    for (const event of block.events) {
+      if (event.phase === "ApplyExtrinsic") {
+        const feeAmount = await extrinsicManager.process(event);
+        eventManager.process(event);
 
-        const feeAmount = await extrinsicManager.process(eventRaw.extrinsic, block.header);
-        eventManager.process(eventRaw, block.header);
-
-        switch (item.name as string) {
+        switch (event.name) {
           case 'EVM.Log':
-            await evmEventManager.process(eventRaw, block.header, feeAmount, transferManager, accountManager, ctx.store);
+            await evmEventManager.process(event, feeAmount, transferManager, accountManager, ctx.store);
             break;
           case 'EVM.Created':
-            await contractManager.process(eventRaw, block.header);
+            await contractManager.process(event);
             break;
           case 'EVM.ExecutedFailed':
-            await evmEventManager.process(eventRaw, block.header, feeAmount, transferManager, accountManager);
+            await evmEventManager.process(event, feeAmount, transferManager, accountManager);
             break;
 
           case 'EvmAccounts.ClaimAccount':
-            const addressClaimer = hexToNativeAddress(eventRaw.args[0]);
+            const addressClaimer = hexToNativeAddress(event.args[0]);
             await accountManager.process(addressClaimer, block.header, true, true);
             break;
 
           case 'Balances.Endowed':
-            const addressEndowed = hexToNativeAddress(eventRaw.args[0]);
+            const addressEndowed = hexToNativeAddress(event.args[0]);
             await accountManager.process(addressEndowed, block.header);
             break;
           case 'Balances.Reserved':
-            const addressReserved = hexToNativeAddress(eventRaw.args[0]);
+            const addressReserved = hexToNativeAddress(event.args[0]);
             await accountManager.process(addressReserved, block.header);
             break;
           case 'Balances.Transfer':
-            await transferManager.process(eventRaw, block.header, accountManager, reefVerifiedContract, feeAmount, true);
+            await transferManager.process(event, accountManager, reefVerifiedContract, feeAmount, true);
             break;
 
           case 'Staking.Rewarded':
-            await stakingManager.process(eventRaw, block.header, accountManager);
+            await stakingManager.process(event, accountManager);
             break;
 
           case 'System.KilledAccount':
-            const address = hexToNativeAddress(eventRaw.args);
+            const address = hexToNativeAddress(event.args);
             await accountManager.process(address, block.header, false);
             break;
         }
       }
     }
+  }
+
+  if (firstInvalidBlockHeight !== 0) {
+    await deleteInvalidBlocks(firstInvalidBlockHeight);
+    firstInvalidBlockHeight = 0;
   }
 
   // Save data to database
@@ -194,6 +222,7 @@ processor.run(database, async (ctx_) => {
   await transferManager.save(blocks, extrinsics, accounts, events);
   await tokenHolderManager.save(accounts);
   await stakingManager.save(accounts, events);
+  latestBlockHeight = ctx.blocks[ctx.blocks.length - 1].header.height;
 
   // Update list of updated accounts for pusher
   if (pusher && headReached) {
@@ -247,4 +276,22 @@ async function pushMessage(data: PusherData) {
       });
     });
   }
+}
+
+
+// Delete invalid blocks and associated data from the database
+async function deleteInvalidBlocks(firstInvalidBlockHeight: number) {
+  const eventsToDelete = await ctx.store.find(Event, { where: { block: { height: MoreThanOrEqual(firstInvalidBlockHeight) } } });
+  const stakingToDelete = await ctx.store.find(Staking, { where: { event: In(eventsToDelete) } });
+  const extrinsicsToDelete = await ctx.store.find(Extrinsic, { where: { block: { height: MoreThanOrEqual(firstInvalidBlockHeight) } } });
+  const transfersToDelete = await ctx.store.find(Transfer, { where: { block: { height: MoreThanOrEqual(firstInvalidBlockHeight) } } });
+  const evmEventsToDelete = await ctx.store.find(EvmEvent, { where: { block: { height: MoreThanOrEqual(firstInvalidBlockHeight) } } });
+  const blocksToDelete = await ctx.store.find(Block, { where: { height: MoreThanOrEqual(firstInvalidBlockHeight) } });
+
+  await ctx.store.remove(stakingToDelete);
+  await ctx.store.remove(eventsToDelete);
+  await ctx.store.remove(extrinsicsToDelete);
+  await ctx.store.remove(transfersToDelete);
+  await ctx.store.remove(evmEventsToDelete);
+  await ctx.store.remove(blocksToDelete);
 }

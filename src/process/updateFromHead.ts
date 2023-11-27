@@ -1,19 +1,18 @@
-import { SubstrateBlock } from "@subsquid/substrate-processor";
-import { BigNumber, ethers } from "ethers";
+import { Not } from "typeorm";
+import { BlockHeader } from "@subsquid/substrate-processor";
+import * as ss58 from '@subsquid/ss58';
 import { Account, ContractType, TokenHolder } from "../model";
-import { ctx } from "../processor";
-import { EvmAccountsEvmAddressesStorage, EVMAccountsStorage, IdentityIdentityOfStorage } from "../types/storage";
-import { bufferToString, extractIdentity, REEF_CONTRACT_ADDRESS, sleep } from "../util/util";
+import { Fields, ctx } from "../processor";
+import { evmAccounts, evm, identity } from "../types/storage";
+import { extractIdentity, REEF_CONTRACT_ADDRESS, sleep, toChainContext } from "../util/util";
 import * as erc20 from "../abi/ERC20";
 import * as erc721 from "../abi/ERC721";
 import * as erc1155 from "../abi/ERC1155";
-import * as ss58 from '@subsquid/ss58';
 import { getBalancesAccount } from "../util/balances/balances";
-import { Not } from "typeorm";
 
-const updateAccounts = async (accounts: Account[], blockHeader: SubstrateBlock) => {
+const updateAccounts = async (accounts: Account[], blockHeader: BlockHeader<Fields>) => {
     // Get current EVM addresses, native balances and identities
-    const addresses = accounts.map((a) => { return ss58.decode(a.id).bytes });
+    const addresses = accounts.map((a) => { return ss58.decode(a.id).bytes }); // TODO ???
     const [evmAddresses, balances, identities] = await Promise.all([
         getEvmAddresses(blockHeader, addresses),
         getNativeBalances(blockHeader, addresses),
@@ -61,7 +60,7 @@ const updateNativeTokenHolders = async (nativeTokenHolders: TokenHolder[]) => {
     ctx.log.info(`Native token holders updated`);
 }
 
-const updateErc20TokenHolders = async (erc20TokenHolders: TokenHolder[], blockHeader: SubstrateBlock) => {
+const updateErc20TokenHolders = async (erc20TokenHolders: TokenHolder[], blockHeader: BlockHeader<Fields>) => {
     // Update balances
     await updateErc20Balances(blockHeader, erc20TokenHolders);
 
@@ -70,7 +69,7 @@ const updateErc20TokenHolders = async (erc20TokenHolders: TokenHolder[], blockHe
     ctx.log.info(`ERC20 token holders updated`);
 }
 
-const updateErc721TokenHolders = async (erc721TokenHolders: TokenHolder[], blockHeader: SubstrateBlock) => {
+const updateErc721TokenHolders = async (erc721TokenHolders: TokenHolder[], blockHeader: BlockHeader<Fields>) => {
     // Update balances
     await updateErc721Balances(blockHeader, erc721TokenHolders);
 
@@ -79,7 +78,7 @@ const updateErc721TokenHolders = async (erc721TokenHolders: TokenHolder[], block
     ctx.log.info(`ERC721 token holders updated`);
 }
 
-const updateErc1155TokenHolders = async (erc1155TokenHolders: TokenHolder[], blockHeader: SubstrateBlock) => {
+const updateErc1155TokenHolders = async (erc1155TokenHolders: TokenHolder[], blockHeader: BlockHeader<Fields>) => {
     // Update balances
     await updateErc1155Balances(blockHeader, erc1155TokenHolders);
 
@@ -88,44 +87,31 @@ const updateErc1155TokenHolders = async (erc1155TokenHolders: TokenHolder[], blo
     ctx.log.info(`ERC1155 token holders updated`);
 }
 
-const getEvmAddresses = async(blockHeader: SubstrateBlock, addresses: Uint8Array[]) => {
-    const storage = new EvmAccountsEvmAddressesStorage(ctx, blockHeader);
-
-    if (!storage.isExists) return undefined;
-    
-    if (storage.isV5) {
-        const res = await storage.asV5.getMany(addresses);
-        return res.map((r) => r ? bufferToString(r as Buffer) : '');
+const getEvmAddresses = async(blockHeader: BlockHeader<Fields>, addresses: string[]) => {
+    const storageV5 = evmAccounts.evmAddresses.v5;
+    if (storageV5.is(blockHeader)) {
+        const res = await storageV5.getMany(blockHeader, addresses);
+        return res.map((r) => r ? r : '');
     } else {
         throw new Error("Unknown storage version");
     }
 }
 
-const getIdentities = async (blockHeader: SubstrateBlock, addresses: Uint8Array[]) => {
-    const storage = new IdentityIdentityOfStorage(ctx, blockHeader);
-
-    if (!storage.isExists) return undefined;
-    
-    if (storage.isV5) {
-        const identityRaws = await storage.asV5.getMany(addresses);
+const getIdentities = async (blockHeader: BlockHeader<Fields>, addresses: string[]) => {
+    const storageV5 = identity.identityOf.v5;
+        if (storageV5.is(blockHeader)) {
+        const identityRaws = await storageV5.getMany(blockHeader, addresses);
         return identityRaws.map(identityRaw => extractIdentity(identityRaw));
     } else {
         throw new Error("Unknown storage version");
     }
 }
 
-const getEvmNonces = async (blockHeader: SubstrateBlock, evmAddresses: string[]) => {
-   const evmAddressesBytes: Uint8Array[] = evmAddresses
-    .filter(evmAddress => evmAddress !== '')
-    .map((evmAddress) => { return ethers.utils.arrayify(evmAddress) });
-
-    const storage = new EVMAccountsStorage(ctx, blockHeader);
-
-    if (!storage.isExists) return undefined;
-
+const getEvmNonces = async (blockHeader: BlockHeader<Fields>, evmAddresses: string[]) => {
     let accountsInfo = [];    
-    if (storage.isV5) {
-        accountsInfo = await storage.asV5.getMany(evmAddressesBytes);
+    const storageV5 = evm.accounts.v5;
+    if (storageV5.is(blockHeader)) {
+        accountsInfo = await storageV5.getMany(blockHeader, evmAddresses);
     } else {
         throw new Error("Unknown storage version");
     }
@@ -138,14 +124,14 @@ const getEvmNonces = async (blockHeader: SubstrateBlock, evmAddresses: string[])
     return evmNonces;
 }
 
-const getNativeBalances = async (blockHeader: SubstrateBlock, addresses: Uint8Array[]) => {
+const getNativeBalances = async (blockHeader: BlockHeader<Fields>, addresses: string[]) => {
     // TODO: Adapt getBalancesAccount to work with process multiple addresses
     return await Promise.all(
         addresses.map((address) => getBalancesAccount(blockHeader, address))
     );
 }
 
-const updateErc20Balances = async (blockHeader: SubstrateBlock, tokenHolders: TokenHolder[]) => {
+const updateErc20Balances = async (blockHeader: BlockHeader<Fields>, tokenHolders: TokenHolder[]) => {
     await Promise.all(
         tokenHolders.map((tokenHolder) => {
             const ownerAddress = tokenHolder.signer?.evmAddress || tokenHolder.evmAddress!;
@@ -153,13 +139,13 @@ const updateErc20Balances = async (blockHeader: SubstrateBlock, tokenHolders: To
                 tokenHolder.balance = BigInt('0');
                 return Promise.resolve();
             }
-            new erc20.Contract(ctx, blockHeader, tokenHolder.token.id).balanceOf(ownerAddress)
+            new erc20.Contract(toChainContext(ctx), blockHeader, tokenHolder.token.id).balanceOf(ownerAddress)
                 .then((balance) => { tokenHolder.balance = BigInt(balance.toString()) });
         })
     );
 }
 
-const updateErc721Balances = async (blockHeader: SubstrateBlock, tokenHolders: TokenHolder[]) => {
+const updateErc721Balances = async (blockHeader: BlockHeader<Fields>, tokenHolders: TokenHolder[]) => {
     await Promise.all(
         tokenHolders.map((tokenHolder) => {
             const ownerAddress = tokenHolder.signer?.evmAddress || tokenHolder.evmAddress!;
@@ -167,13 +153,13 @@ const updateErc721Balances = async (blockHeader: SubstrateBlock, tokenHolders: T
                 tokenHolder.balance = BigInt('0');
                 return Promise.resolve();
             }
-            new erc721.Contract(ctx, blockHeader, tokenHolder.token.id).balanceOf(ownerAddress)
+            new erc721.Contract(toChainContext(ctx), blockHeader, tokenHolder.token.id).balanceOf(ownerAddress)
                 .then((balance) => { tokenHolder.balance = BigInt(balance.toString()) });
         })
     );
 }
 
-const updateErc1155Balances = async (blockHeader: SubstrateBlock, tokenHolders: TokenHolder[]) => {
+const updateErc1155Balances = async (blockHeader: BlockHeader<Fields>, tokenHolders: TokenHolder[]) => {
     // TODO: Group by contract and call in batch with `balanceOfBatch` (controlling that the batch size is not too big)
     await Promise.all(
         tokenHolders.map((tokenHolder) => {
@@ -182,14 +168,14 @@ const updateErc1155Balances = async (blockHeader: SubstrateBlock, tokenHolders: 
                 tokenHolder.balance = BigInt('0');
                 return Promise.resolve();
             }
-            new erc1155.Contract(ctx, blockHeader, tokenHolder.token.id).balanceOf(ownerAddress, BigNumber.from(tokenHolder.nftId!))
+            new erc1155.Contract(toChainContext(ctx), blockHeader, tokenHolder.token.id).balanceOf(ownerAddress, BigInt(tokenHolder.nftId!))
                 .then((balance) => { tokenHolder.balance = BigInt(balance.toString()) });
         })
     );
 }
 
 // Queries storage and updates database once head block has been reached
-export const updateFromHead = async (blockHeader: SubstrateBlock) => {
+export const updateFromHead = async (blockHeader: BlockHeader<Fields>) => {
     const BATCH_SIZE = process.env.BATCH_SIZE ? parseInt(process.env.BATCH_SIZE) : 100;
     const WAIT_TIME = process.env.WAIT_TIME ? parseInt(process.env.WAIT_TIME) : 0;
 
