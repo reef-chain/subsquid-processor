@@ -16,9 +16,9 @@ import { TokenHolderManager } from "./process/tokenHolderManager";
 import { StakingManager } from "./process/stakingManager";
 import { fetchModules, hexToNativeAddress, MetadataModule, REEF_CONTRACT_ADDRESS } from "./util/util";
 import { KnownArchives, lookupArchive } from "@subsquid/archive-registry";
-import { Account, Extrinsic, PusherMessage, VerifiedContract } from "./model";
+import { Account, Extrinsic, VerifiedContract } from "./model";
 import { updateFromHead } from "./process/updateFromHead";
-import Pusher from "pusher";
+import { initFmc, sendMessage } from "./firebase/firebase";
 
 const network = process.env.NETWORK;
 if (!network) {
@@ -30,8 +30,6 @@ const AQUARIUM_ARCHIVE_NAME = process.env[`ARCHIVE_LOOKUP_NAME_${network.toUpper
 console.log('\nNETWORK=',network, ' RPC=', RPC_URL, ' AQUARIUM_ARCHIVE_NAME=', AQUARIUM_ARCHIVE_NAME);
 const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME);
 const START_BLOCK = parseInt(process.env.START_BLOCK || '0');
-const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
-const PUSHER_EVENT = process.env.PUSHER_EVENT;
 
 const database = new TypeormDatabase();
 const processor = new SubstrateBatchProcessor()
@@ -39,20 +37,6 @@ const processor = new SubstrateBatchProcessor()
   .setDataSource({ chain: RPC_URL, archive: ARCHIVE })
   .addEvent("*")
   .includeAllBlocks(); // Force the processor to fetch the header data for all the blocks (by default, the processor fetches the block data only for all blocks that contain log items it was subscribed to)
-
-let pusher: Pusher;
-if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
-  pusher = new Pusher({
-    appId: process.env.PUSHER_APP_ID!,
-    key: process.env.PUSHER_KEY!,
-    secret: process.env.PUSHER_SECRET!,
-    cluster: process.env.PUSHER_CLUSTER || "eu",
-    useTLS: true
-  });
-  console.log('Pusher enabled: true');
-} else {
-  console.log('Pusher enabled: false');
-}
 
 export type Item = BatchProcessorItem<typeof processor>;
 export type Context = BatchContext<Store, Item>;
@@ -71,13 +55,14 @@ console.log(`Pin to IPFS: ${pinToIPFSEnabled}`);
 
 let isFirstBatch = true;
 let pusherData: PusherData;
+let pusherEnabled = initFmc();
 
 processor.run(database, async (ctx_) => {
   ctx = ctx_;
 
   // Push data from previous batch
-  if (pusher && pusherData) {
-    pushMessage(pusherData);
+  if (pusherEnabled && pusherData) {
+    sendMessage(pusherData);
   }
 
   // Initialize global variables in first batch
@@ -196,7 +181,7 @@ processor.run(database, async (ctx_) => {
   await stakingManager.save(accounts, events);
 
   // Update list of updated accounts for pusher
-  if (pusher && headReached) {
+  if (pusherEnabled && headReached) {
     const lastBlockHeader = ctx.blocks[ctx.blocks.length - 1].header;
     
     const updatedErc20Accounts = Array.from(tokenHolderManager.tokenHoldersData.values())
@@ -227,33 +212,3 @@ processor.run(database, async (ctx_) => {
   }
   
 });
-
-async function pushMessage(data: PusherData) {
-  if (!data.updatedContracts.length 
-    && !data.updatedAccounts.REEF20Transfers.length 
-    && !data.updatedAccounts.REEF721Transfers.length 
-    && !data.updatedAccounts.REEF1155Transfers.length 
-    && !data.updatedAccounts.boundEvm.length
-  ) {
-    return;
-  }
-
-  try {
-    await pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
-  } catch (e) {
-    ctx.log.error(`Pusher error: ${e}`);
-    const messagesToDelete = await ctx.store.find(PusherMessage, { order: { id: 'DESC' }, skip: 2 });
-    if (messagesToDelete.length) {
-      await ctx.store.remove(messagesToDelete);
-    }
-    ctx.store.save(new PusherMessage({ id: data.blockId, data: JSON.stringify(data) })).then(() => {
-      ctx.log.info(`Pusher message for block ${data.blockId} saved to database.`);
-      pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, {
-        blockHeight: data.blockHeight,
-        blockId: data.blockId,
-        blockHash: data.blockHash,
-        error: true
-      });
-    });
-  }
-}

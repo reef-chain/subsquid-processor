@@ -2,24 +2,23 @@ import { BigInteger, Int } from '@subsquid/graphql-server';
 import { Arg, Field, InputType, Mutation, ObjectType, Query, Resolver } from 'type-graphql'
 import { EntityManager, In } from 'typeorm'
 import { Account, TokenHolder, TokenHolderType, VerifiedContract } from '../../model';
-import Pusher from "pusher";
 import { PusherData } from '../../interfaces/interfaces';
 
-let pusher: Pusher;
-const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
-const PUSHER_EVENT = process.env.PUSHER_EVENT;
-if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
-  pusher = new Pusher({
-    appId: process.env.PUSHER_APP_ID!,
-    key: process.env.PUSHER_KEY!,
-    secret: process.env.PUSHER_SECRET!,
-    cluster: process.env.PUSHER_CLUSTER || "eu",
-    useTLS: true
-  });
-  console.log('Pusher enabled for API: true');
-} else {
-  console.log('Pusher enabled for API: false');
-}
+// let pusher: Pusher;
+// const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
+// const PUSHER_EVENT = process.env.PUSHER_EVENT;
+// if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
+//   pusher = new Pusher({
+//     appId: process.env.PUSHER_APP_ID!,
+//     key: process.env.PUSHER_KEY!,
+//     secret: process.env.PUSHER_SECRET!,
+//     cluster: process.env.PUSHER_CLUSTER || "eu",
+//     useTLS: true
+//   });
+//   console.log('Pusher enabled for API: true');
+// } else {
+//   console.log('Pusher enabled for API: false');
+// }
 
 @InputType()
 export class TokenHolderInput {
@@ -102,42 +101,42 @@ export class TokenHolderResolver {
 
     await manager.save(entities);
 
-    if (pusher) {
-      const updatedErc20Accounts = entities
-        .filter(t => t.token.type === 'ERC20' && t.signer?.id !== '')
-        .map(t => t.signer!.id as string)
-        .filter((value, index, array) => array.indexOf(value) === index);
-      const updatedErc721Accounts = entities
-        .filter(t => t.token.type === 'ERC721' && t.signer?.id !== '')
-        .map(t => t.signer!.id as string)
-        .filter((value, index, array) => array.indexOf(value) === index);
-      const updatedErc1155Accounts = entities
-        .filter(t => t.token.type === 'ERC1155' && t.signer?.id !== '')
-        .map(t => t.signer!.id as string)
-        .filter((value, index, array) => array.indexOf(value) === index);
+    // if (pusher) {
+    //   const updatedErc20Accounts = entities
+    //     .filter(t => t.token.type === 'ERC20' && t.signer?.id !== '')
+    //     .map(t => t.signer!.id as string)
+    //     .filter((value, index, array) => array.indexOf(value) === index);
+    //   const updatedErc721Accounts = entities
+    //     .filter(t => t.token.type === 'ERC721' && t.signer?.id !== '')
+    //     .map(t => t.signer!.id as string)
+    //     .filter((value, index, array) => array.indexOf(value) === index);
+    //   const updatedErc1155Accounts = entities
+    //     .filter(t => t.token.type === 'ERC1155' && t.signer?.id !== '')
+    //     .map(t => t.signer!.id as string)
+    //     .filter((value, index, array) => array.indexOf(value) === index);
       
-      if (!updatedErc20Accounts.length 
-        && !updatedErc721Accounts.length 
-        && !updatedErc1155Accounts.length
-      ) {
-        return true;
-      }
+    //   if (!updatedErc20Accounts.length 
+    //     && !updatedErc721Accounts.length 
+    //     && !updatedErc1155Accounts.length
+    //   ) {
+    //     return true;
+    //   }
       
-      const data: PusherData = {
-        blockHeight: -1,
-        blockId: '',
-        blockHash: '',
-        updatedAccounts: {
-            REEF20Transfers: updatedErc20Accounts,
-            REEF721Transfers: updatedErc721Accounts,
-            REEF1155Transfers: updatedErc1155Accounts,
-            boundEvm: []
-        },
-        updatedContracts: [],
-      };
+    //   const data: PusherData = {
+    //     blockHeight: -1,
+    //     blockId: '',
+    //     blockHash: '',
+    //     updatedAccounts: {
+    //         REEF20Transfers: updatedErc20Accounts,
+    //         REEF721Transfers: updatedErc721Accounts,
+    //         REEF1155Transfers: updatedErc1155Accounts,
+    //         boundEvm: []
+    //     },
+    //     updatedContracts: [],
+    //   };
 
-      pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
-    }
+    //   pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
+    // }
 
     return true;
   }
