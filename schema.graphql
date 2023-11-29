@@ -196,6 +196,7 @@ type Staking @entity {
 
 # ===================== Pusher ============================
 
+# TODO: remove pusher
 type PusherMessage @entity {
   "Block ID"
   id: ID!

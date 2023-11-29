@@ -5,6 +5,25 @@ import { Account, TokenHolder, TokenHolderType, VerifiedContract } from '../../m
 import { NewBlockData } from "../../interfaces/interfaces";
 import { FirebaseDB } from '../../firebase/firebase';
 
+// TODO: remove pusher
+import Pusher from "pusher";
+
+let pusher: Pusher;
+const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
+const PUSHER_EVENT = process.env.PUSHER_EVENT;
+if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
+  pusher = new Pusher({
+    appId: process.env.PUSHER_APP_ID!,
+    key: process.env.PUSHER_KEY!,
+    secret: process.env.PUSHER_SECRET!,
+    cluster: process.env.PUSHER_CLUSTER || "eu",
+    useTLS: true
+  });
+  console.log('Pusher enabled for API: true');
+} else {
+  console.log('Pusher enabled for API: false');
+}
+
 const firebaseDB = process.env.NOTIFY_NEW_BLOCKS === 'true' ? new FirebaseDB() : null;
 
 @InputType()
@@ -123,6 +142,9 @@ export class TokenHolderResolver {
       };
 
       firebaseDB.notifyBlock(data);
+
+      // TODO: remove pusher
+      if (pusher) pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
     }
 
     return true;

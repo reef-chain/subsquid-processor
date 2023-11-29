@@ -16,9 +16,14 @@ import { TokenHolderManager } from "./process/tokenHolderManager";
 import { StakingManager } from "./process/stakingManager";
 import { fetchModules, hexToNativeAddress, MetadataModule, REEF_CONTRACT_ADDRESS } from "./util/util";
 import { KnownArchives, lookupArchive } from "@subsquid/archive-registry";
-import { Account, Extrinsic, VerifiedContract } from "./model";
+import { Account, Extrinsic, PusherMessage, VerifiedContract } from "./model";
 import { updateFromHead } from "./process/updateFromHead";
 import { FirebaseDB } from "./firebase/firebase";
+
+// TODO: remove pusher
+import Pusher from "pusher";
+const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
+const PUSHER_EVENT = process.env.PUSHER_EVENT;
 
 const network = process.env.NETWORK;
 if (!network) {
@@ -37,6 +42,21 @@ const processor = new SubstrateBatchProcessor()
   .setDataSource({ chain: RPC_URL, archive: ARCHIVE })
   .addEvent("*")
   .includeAllBlocks(); // Force the processor to fetch the header data for all the blocks (by default, the processor fetches the block data only for all blocks that contain log items it was subscribed to)
+
+// TODO: remove pusher
+let pusher: Pusher;
+if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
+  pusher = new Pusher({
+    appId: process.env.PUSHER_APP_ID!,
+    key: process.env.PUSHER_KEY!,
+    secret: process.env.PUSHER_SECRET!,
+    cluster: process.env.PUSHER_CLUSTER || "eu",
+    useTLS: true
+  });
+  console.log('Pusher enabled: true');
+} else {
+  console.log('Pusher enabled: false');
+}
 
 export type Item = BatchProcessorItem<typeof processor>;
 export type Context = BatchContext<Store, Item>;
@@ -63,6 +83,10 @@ processor.run(database, async (ctx_) => {
   // Push data from previous batch
   if (firebaseDB && newBlockData) {
     firebaseDB.notifyBlock(newBlockData);
+  }
+  // TODO: remove pusher
+  if (pusher && newBlockData) {
+    pushMessage(newBlockData);
   }
 
   // Initialize global variables in first batch
@@ -211,4 +235,34 @@ processor.run(database, async (ctx_) => {
     };
   }
   
+  // TODO: remove pusher
+  async function pushMessage(data: NewBlockData) {
+    if (!data.updatedContracts.length 
+      && !data.updatedAccounts.REEF20Transfers.length 
+      && !data.updatedAccounts.REEF721Transfers.length 
+      && !data.updatedAccounts.REEF1155Transfers.length 
+      && !data.updatedAccounts.boundEvm.length
+    ) {
+      return;
+    }
+  
+    try {
+      await pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
+    } catch (e) {
+      ctx.log.error(`Pusher error: ${e}`);
+      const messagesToDelete = await ctx.store.find(PusherMessage, { order: { id: 'DESC' }, skip: 2 });
+      if (messagesToDelete.length) {
+        await ctx.store.remove(messagesToDelete);
+      }
+      ctx.store.save(new PusherMessage({ id: data.blockId, data: JSON.stringify(data) })).then(() => {
+        ctx.log.info(`Pusher message for block ${data.blockId} saved to database.`);
+        pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, {
+          blockHeight: data.blockHeight,
+          blockId: data.blockId,
+          blockHash: data.blockHash,
+          error: true
+        });
+      });
+    }
+  }
 });
