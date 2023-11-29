@@ -17,35 +17,17 @@ deploy:
         true
       PIN_TO_IPFS:
         true
-      PUSHER_ENABLED:
+      NOTIFY_NEW_BLOCKS:
         true
-      PUSHER_APP_ID:
-        1629403
-      PUSHER_KEY:
-        fc5ad78eb31981de6c67
-      PUSHER_CLUSTER:
-        eu
-      PUSHER_CHANNEL:
-        reef-chain
-      PUSHER_EVENT:
-        block-finalised-testnet
     cmd: [ "node", "lib/processor" ]
   api:
     env:
+      NETWORK:
+        testnet
       SQUID_NAME:
         reef-explorer-testnet
-      PUSHER_ENABLED:
+      NOTIFY_NEW_BLOCKS:
         true
-      PUSHER_APP_ID:
-        1629403
-      PUSHER_KEY:
-        fc5ad78eb31981de6c67
-      PUSHER_CLUSTER:
-        eu
-      PUSHER_CHANNEL:
-        reef-chain
-      PUSHER_EVENT:
-        block-finalised-testnet
     cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
   secrets:
     - NODE_RPC_WS_MAINNET
@@ -57,6 +39,7 @@ deploy:
     - INFURA_IPFS_KEY
     - APIKEY_REEF_BRIDGE
     - PUSHER_SECRET
+    - FIREBASE_CONFIG
 
 scale:
   dedicated: true
