@@ -2,8 +2,11 @@ import { BigInteger, Int } from '@subsquid/graphql-server';
 import { Arg, Field, InputType, Mutation, ObjectType, Query, Resolver } from 'type-graphql'
 import { EntityManager, In } from 'typeorm'
 import { Account, TokenHolder, TokenHolderType, VerifiedContract } from '../../model';
+import { NewBlockData } from "../../interfaces/interfaces";
+import { FirebaseDB } from '../../firebase/firebase';
+
+// TODO: remove pusher
 import Pusher from "pusher";
-import { PusherData } from '../../interfaces/interfaces';
 
 let pusher: Pusher;
 const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
@@ -20,6 +23,8 @@ if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
 } else {
   console.log('Pusher enabled for API: false');
 }
+
+const firebaseDB = process.env.NOTIFY_NEW_BLOCKS === 'true' ? new FirebaseDB() : null;
 
 @InputType()
 export class TokenHolderInput {
@@ -102,7 +107,7 @@ export class TokenHolderResolver {
 
     await manager.save(entities);
 
-    if (pusher) {
+    if (firebaseDB) {
       const updatedErc20Accounts = entities
         .filter(t => t.token.type === 'ERC20' && t.signer?.id !== '')
         .map(t => t.signer!.id as string)
@@ -123,7 +128,7 @@ export class TokenHolderResolver {
         return true;
       }
       
-      const data: PusherData = {
+      const data: NewBlockData = {
         blockHeight: -1,
         blockId: '',
         blockHash: '',
@@ -136,7 +141,10 @@ export class TokenHolderResolver {
         updatedContracts: [],
       };
 
-      pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
+      firebaseDB.notifyBlock(data);
+
+      // TODO: remove pusher
+      if (pusher) pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
     }
 
     return true;

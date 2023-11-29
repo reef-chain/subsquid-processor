@@ -17,6 +17,10 @@ deploy:
         true
       PIN_TO_IPFS:
         true
+      NOTIFY_NEW_BLOCKS:
+        true
+      FIREBASE_DB_URL:
+        https://reef-block-index-default-rtdb.firebaseio.com/
       PUSHER_ENABLED:
         true
       PUSHER_APP_ID:
@@ -32,8 +36,14 @@ deploy:
     cmd: [ "node", "lib/processor" ]
   api:
     env:
+      NETWORK:
+        mainnet
       SQUID_NAME:
         reef-explorer
+      NOTIFY_NEW_BLOCKS:
+        true
+      FIREBASE_DB_URL:
+        https://reef-block-index-default-rtdb.firebaseio.com/
       PUSHER_ENABLED:
         true
       PUSHER_APP_ID:
@@ -57,6 +67,7 @@ deploy:
     - INFURA_IPFS_KEY
     - APIKEY_REEF_BRIDGE
     - PUSHER_SECRET
+    - FIREBASE_SERVICE_ACCOUNT
 
 scale:
   dedicated: true
