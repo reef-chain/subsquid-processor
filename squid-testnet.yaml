@@ -19,6 +19,8 @@ deploy:
         true
       NOTIFY_NEW_BLOCKS:
         true
+      FIREBASE_DB_URL:
+        https://reef-block-index-default-rtdb.firebaseio.com/
     cmd: [ "node", "lib/processor" ]
   api:
     env:
@@ -28,6 +30,8 @@ deploy:
         reef-explorer-testnet
       NOTIFY_NEW_BLOCKS:
         true
+      FIREBASE_DB_URL:
+        https://reef-block-index-default-rtdb.firebaseio.com/
     cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
   secrets:
     - NODE_RPC_WS_MAINNET
@@ -39,7 +43,7 @@ deploy:
     - INFURA_IPFS_KEY
     - APIKEY_REEF_BRIDGE
     - PUSHER_SECRET
-    - FIREBASE_CONFIG
+    - FIREBASE_SERVICE_ACCOUNT
 
 scale:
   dedicated: true

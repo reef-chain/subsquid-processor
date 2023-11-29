@@ -1,20 +1,24 @@
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, DatabaseReference } from "firebase/database";
+import admin from 'firebase-admin';
+import { Reference } from "firebase-admin/database";
 import { NewBlockData } from "../interfaces/interfaces";
 import { ctx } from "../processor";
 
 export class FirebaseDB {
     // Use the same ref to store only the latest block
-    private dbRef: DatabaseReference;
+    private dbRef: Reference;
 
     constructor() {
         if (!process.env.NETWORK) throw new Error('Network not set in environment');
-        if (!process.env.FIREBASE_CONFIG) throw new Error('Firebase config not found');
+        if (!process.env.FIREBASE_SERVICE_ACCOUNT) throw new Error('Firebase service account not set in environment');
+        if (!process.env.FIREBASE_DB_URL) throw new Error('Firebase DB not set in environment');
 
-        const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        this.dbRef = ref(db, process.env.NETWORK);
+        admin.initializeApp({ 
+            credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
+            databaseURL: process.env.FIREBASE_DB_URL 
+        });
+
+        const db = admin.database();
+        this.dbRef = db.ref(process.env.NETWORK);
     }
 
     public notifyBlock(data: NewBlockData) {
@@ -29,7 +33,7 @@ export class FirebaseDB {
 
         try {
             const { blockHeight, ...blockData } = data;
-            set(this.dbRef, { [blockHeight]: blockData });
+            this.dbRef.set({ [blockHeight]: blockData });
         } catch (e) {
             ctx.log.error(`Firebase DB notification error for block ${data.blockId}`);
         }
