@@ -9,11 +9,17 @@ export class FirebaseDB {
 
     constructor() {
         if (!process.env.NETWORK) throw new Error('Network not set in environment');
-        if (!process.env.FIREBASE_SERVICE_ACCOUNT) throw new Error('Firebase service account not set in environment');
+        if (!process.env.FIREBASE_PROJECT_ID) throw new Error('Firebase project ID not set in environment');
+        if (!process.env.FIREBASE_CLIENT_EMAIL) throw new Error('Firebase client email not set in environment');
+        if (!process.env.FIREBASE_PK) throw new Error('Firebase private key not set in environment');
         if (!process.env.FIREBASE_DB_URL) throw new Error('Firebase DB not set in environment');
 
         admin.initializeApp({ 
-            credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
+            credential: admin.credential.cert({
+                projectId: process.env.FIREBASE_PROJECT_ID,
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                privateKey: process.env.FIREBASE_PK
+            }),
             databaseURL: process.env.FIREBASE_DB_URL 
         });
 

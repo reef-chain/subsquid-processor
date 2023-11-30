@@ -19,6 +19,8 @@ deploy:
         true
       NOTIFY_NEW_BLOCKS:
         true
+      FIREBASE_PROJECT_ID:
+        reef-block-index
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
       PUSHER_ENABLED:
@@ -42,6 +44,8 @@ deploy:
         reef-explorer
       NOTIFY_NEW_BLOCKS:
         true
+      FIREBASE_PROJECT_ID:
+        reef-block-index
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
       PUSHER_ENABLED:
@@ -67,7 +71,8 @@ deploy:
     - INFURA_IPFS_KEY
     - APIKEY_REEF_BRIDGE
     - PUSHER_SECRET
-    - FIREBASE_SERVICE_ACCOUNT
+    - FIREBASE_CLIENT_EMAIL
+    - FIREBASE_PK
 
 scale:
   dedicated: true
