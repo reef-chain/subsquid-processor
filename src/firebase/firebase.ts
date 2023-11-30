@@ -1,7 +1,6 @@
 import admin from 'firebase-admin';
 import { Reference } from "firebase-admin/database";
 import { NewBlockData } from "../interfaces/interfaces";
-import { ctx } from "../processor";
 
 export class FirebaseDB {
     // Use the same ref to store only the latest block
@@ -14,13 +13,15 @@ export class FirebaseDB {
         if (!process.env.FIREBASE_PK) throw new Error('Firebase private key not set in environment');
         if (!process.env.FIREBASE_DB_URL) throw new Error('Firebase DB not set in environment');
 
+        const firebasePk = Buffer.from(process.env.FIREBASE_PK, 'base64').toString('ascii');
+
         admin.initializeApp({ 
             credential: admin.credential.cert({
                 projectId: process.env.FIREBASE_PROJECT_ID,
                 clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                privateKey: process.env.FIREBASE_PK
+                privateKey: firebasePk
             }),
-            databaseURL: process.env.FIREBASE_DB_URL 
+            databaseURL: process.env.FIREBASE_DB_URL
         });
 
         const db = admin.database();
@@ -41,7 +42,7 @@ export class FirebaseDB {
             const { blockHeight, ...blockData } = data;
             this.dbRef.set({ [blockHeight]: blockData });
         } catch (e) {
-            ctx.log.error(`Firebase DB notification error for block ${data.blockId}`);
+            console.error(`Firebase DB notification error for block ${data.blockId}`);
         }
     }
 }

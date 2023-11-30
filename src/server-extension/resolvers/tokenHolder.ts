@@ -25,6 +25,7 @@ if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
 }
 
 const firebaseDB = process.env.NOTIFY_NEW_BLOCKS === 'true' ? new FirebaseDB() : null;
+console.log(`Notify new blocks for API: ${!!firebaseDB}`);
 
 @InputType()
 export class TokenHolderInput {
@@ -109,15 +110,15 @@ export class TokenHolderResolver {
 
     if (firebaseDB) {
       const updatedErc20Accounts = entities
-        .filter(t => t.token.type === 'ERC20' && t.signer?.id !== '')
+        .filter(t => t.token.type === 'ERC20' && !!t.signer?.id)
         .map(t => t.signer!.id as string)
         .filter((value, index, array) => array.indexOf(value) === index);
       const updatedErc721Accounts = entities
-        .filter(t => t.token.type === 'ERC721' && t.signer?.id !== '')
+        .filter(t => t.token.type === 'ERC721' && !!t.signer?.id)
         .map(t => t.signer!.id as string)
         .filter((value, index, array) => array.indexOf(value) === index);
       const updatedErc1155Accounts = entities
-        .filter(t => t.token.type === 'ERC1155' && t.signer?.id !== '')
+        .filter(t => t.token.type === 'ERC1155' && !!t.signer?.id)
         .map(t => t.signer!.id as string)
         .filter((value, index, array) => array.indexOf(value) === index);
       

@@ -75,7 +75,9 @@ console.log(`Pin to IPFS: ${pinToIPFSEnabled}`);
 
 let isFirstBatch = true;
 let newBlockData: NewBlockData;
+
 const firebaseDB = process.env.NOTIFY_NEW_BLOCKS === 'true' ? new FirebaseDB() : null;
+console.log(`Notify new blocks: ${!!firebaseDB}`);
 
 processor.run(database, async (ctx_) => {
   ctx = ctx_;
@@ -204,7 +206,7 @@ processor.run(database, async (ctx_) => {
   await tokenHolderManager.save(accounts);
   await stakingManager.save(accounts, events);
 
-  // Update list of updated accounts for pusher
+  // Update list of updated accounts for notification
   if (firebaseDB && headReached) {
     const lastBlockHeader = ctx.blocks[ctx.blocks.length - 1].header;
     
