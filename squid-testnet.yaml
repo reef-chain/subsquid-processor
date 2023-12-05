@@ -23,6 +23,8 @@ deploy:
         reef-block-index
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
+      REEFSWAP_ROUTER_ADDRESS_TESTNET:
+        "0xd855a7c33ebF6566e846B0D6F7Ba7f7e1fe99768"
       PUSHER_ENABLED:
         true
       PUSHER_APP_ID:

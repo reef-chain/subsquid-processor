@@ -35,6 +35,7 @@ const AQUARIUM_ARCHIVE_NAME = process.env[`ARCHIVE_LOOKUP_NAME_${network.toUpper
 console.log('\nNETWORK=',network, ' RPC=', RPC_URL, ' AQUARIUM_ARCHIVE_NAME=', AQUARIUM_ARCHIVE_NAME);
 const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME);
 const START_BLOCK = parseInt(process.env.START_BLOCK || '0');
+export const REEFSWAP_ROUTER_ADDRESS = process.env[`REEFSWAP_ROUTER_ADDRESS_${network.toUpperCase()}`];
 
 const database = new TypeormDatabase();
 const processor = new SubstrateBatchProcessor()
