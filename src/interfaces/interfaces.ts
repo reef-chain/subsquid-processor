@@ -1,6 +1,6 @@
 import { JsonFragment } from "@ethersproject/abi";
 import { QualifiedName, SubstrateEvent, SubstrateExtrinsicSignature } from "@subsquid/substrate-processor"
-import { EvmEventStatus, EvmEventType, ExtrinsicStatus, ExtrinsicType, StakingType, TokenHolderType, TransferType, VerifiedContract } from "../model"
+import { EvmEventStatus, EvmEventType, ExtrinsicStatus, ExtrinsicType, ReefswapAction, StakingType, TokenHolderType, TransferType, VerifiedContract } from "../model"
 
 interface Fee {
     class: string,
@@ -110,6 +110,7 @@ export interface TransferData {
     toEvmAddress: string;
     fromEvmAddress: string;
     type: TransferType;
+    reefswapAction: ReefswapAction | undefined | null;
     amount: bigint;
     success: boolean;
     timestamp: Date;

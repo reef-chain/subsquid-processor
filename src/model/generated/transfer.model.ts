@@ -6,6 +6,7 @@ import {Event} from "./event.model"
 import {Account} from "./account.model"
 import {VerifiedContract} from "./verifiedContract.model"
 import {TransferType} from "./_transferType"
+import {ReefswapAction} from "./_reefswapAction"
 
 @Index_(["id", "extrinsic"], {unique: true})
 @Index_(["id", "event"], {unique: true})
@@ -52,6 +53,9 @@ export class Transfer {
 
     @Column_("varchar", {length: 7, nullable: false})
     type!: TransferType
+
+    @Column_("varchar", {length: 15, nullable: true})
+    reefswapAction!: ReefswapAction | undefined | null
 
     @Index_()
     @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})

@@ -77,6 +77,7 @@ export const processErc1155BatchTransfer = async (
             toEvmAddress: toEvmAddress,
             fromEvmAddress: fromEvmAddress,
             type: TransferType.ERC1155,
+            reefswapAction: null,
             amount: BigInt(values_[i].toString()),
             success: true,
             timestamp: new Date(blockHeader.timestamp),

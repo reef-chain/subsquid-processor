@@ -1,7 +1,7 @@
 import { SubstrateBlock } from "@subsquid/substrate-processor";
 import { AccountManager } from "./accountManager";
 import { EventRaw, TransferData } from "../interfaces/interfaces";
-import { Account, Block, ContractType, Event, Extrinsic, Transfer, VerifiedContract } from "../model";
+import { Account, Block, ContractType, Event, Extrinsic, Transfer, TransferType, VerifiedContract } from "../model";
 import * as erc20 from "../abi/ERC20";
 import * as erc721 from "../abi/ERC721";
 import * as erc1155 from "../abi/ERC1155";
@@ -12,6 +12,8 @@ import { processErc1155BatchTransfer } from "../process/transfer/erc1155BatchTra
 import { processNativeTransfer } from "./transfer/nativeTransfer";
 import { TokenHolderManager } from "./tokenHolderManager";
 import { ctx } from "../processor";
+import { REEF_CONTRACT_ADDRESS } from "../util/util";
+import { extractReefswapRouterData } from "./transfer/reefswapRouterData";
 
 export class TransferManager {  
     transfersData: TransferData[] = [];
@@ -37,8 +39,17 @@ export class TransferManager {
         switch (eventRaw.args.topics[0]) {
             case erc20.events.Transfer.topic:
                 if (contract.type !== ContractType.ERC20) break;
-                const erc20Transfer = await processErc20Transfer(eventRaw, blockHeader, contract, feeAmount, accountManager, this.tokenHolderManager);
-                if (erc20Transfer) this.transfersData.push(erc20Transfer);
+                if (contract.id === REEF_CONTRACT_ADDRESS) {
+                    // Already processed in processNativeTransfer. Add Reefswap action if needed.
+                    const [, , value] = erc20.events.Transfer.decode(eventRaw.args.log || eventRaw.args);
+                    const lastNativeIndex = this.transfersData.map(td => td.type).lastIndexOf(TransferType.Native);
+                    // Sanity checks, should never happen
+                    if (lastNativeIndex === -1 || value.toString() !== this.transfersData[lastNativeIndex].amount.toString()) break;
+                    this.transfersData[lastNativeIndex].reefswapAction = extractReefswapRouterData(eventRaw, REEF_CONTRACT_ADDRESS);
+                } else {
+                    const erc20Transfer = await processErc20Transfer(eventRaw, blockHeader, contract, feeAmount, accountManager, this.tokenHolderManager);
+                    if (erc20Transfer) this.transfersData.push(erc20Transfer);
+                }
                 break;
             case erc721.events.Transfer.topic:
                 if (contract.type !== ContractType.ERC721) break;
@@ -120,5 +131,3 @@ export class TransferManager {
         await ctx.store.insert(transfers);
     }
 }
-
-  

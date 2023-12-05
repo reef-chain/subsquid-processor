@@ -119,6 +119,7 @@ type Transfer @entity @index(fields: ["id", "extrinsic"], unique: true) @index (
   toEvmAddress: String @index
   fromEvmAddress: String @index
   type: TransferType!
+  reefswapAction: ReefswapAction
   amount: BigInt! @index
   feeAmount: BigInt! @index
   denom: String @index
@@ -227,6 +228,12 @@ enum TransferType {
   ERC20, 
   ERC721, 
   ERC1155
+}
+
+enum ReefswapAction {
+  AddLiquidity,
+  RemoveLiquidity,
+  Swap
 }
 
 enum TokenHolderType {
