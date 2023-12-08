@@ -1,6 +1,6 @@
 {
   "outDir": "src/types",
-  "specVersions": "./reefVersions.jsonl",
+  "specVersions": "https://v2.archive.subsquid.io/metadata/reef",
   "pallets": {
     "Balances": {
       "storage": true

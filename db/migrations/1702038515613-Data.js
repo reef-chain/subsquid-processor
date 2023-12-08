@@ -1,5 +1,5 @@
-module.exports = class Data1684171397160 {
-    name = 'Data1684171397160'
+module.exports = class Data1702038515613 {
+    name = 'Data1702038515613'
 
     async up(db) {
         await db.query(`CREATE TABLE "chain_info" ("id" character varying NOT NULL, "count" integer NOT NULL, CONSTRAINT "PK_1b82ce2acbc16bfc7f84bfdc8ff" PRIMARY KEY ("id"))`)
@@ -20,7 +20,7 @@ module.exports = class Data1684171397160 {
         await db.query(`CREATE UNIQUE INDEX "IDX_19da258c78571f6cac009d72b5" ON "contract" ("extrinsic_id", "id") `)
         await db.query(`CREATE TABLE "extrinsic" ("id" character varying NOT NULL, "index" integer NOT NULL, "hash" text NOT NULL, "args" jsonb NOT NULL, "docs" text NOT NULL, "method" text NOT NULL, "section" text NOT NULL, "signer" text NOT NULL, "status" character varying(7) NOT NULL, "error_message" text, "type" character varying(8) NOT NULL, "signed_data" jsonb, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "block_id" character varying, CONSTRAINT "PK_80d7db0e4b1e83e30336bc76755" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_a3b99daba1259dab0dd040d4f7" ON "extrinsic" ("block_id") `)
-        await db.query(`CREATE UNIQUE INDEX "IDX_1f45de0713a55049009e8e8127" ON "extrinsic" ("hash") `)
+        await db.query(`CREATE INDEX "IDX_1f45de0713a55049009e8e8127" ON "extrinsic" ("hash") `)
         await db.query(`CREATE INDEX "IDX_fee06ac3db4d6eaeab04d0e5eb" ON "extrinsic" ("method") `)
         await db.query(`CREATE INDEX "IDX_f27ce26722a5bff4dad664d4cb" ON "extrinsic" ("section") `)
         await db.query(`CREATE INDEX "IDX_001ddf290faf765f9dfd9154d3" ON "extrinsic" ("signer") `)
@@ -81,6 +81,7 @@ module.exports = class Data1684171397160 {
         await db.query(`CREATE INDEX "IDX_6ee1999545992b2cd1ba1f1f65" ON "staking" ("signer_id") `)
         await db.query(`CREATE INDEX "IDX_c4f2c390140b9ff847dae45002" ON "staking" ("event_id") `)
         await db.query(`CREATE INDEX "IDX_e837120901fd17225e43f7d421" ON "staking" ("type") `)
+        await db.query(`CREATE TABLE "pusher_message" ("id" character varying NOT NULL, "data" text NOT NULL, CONSTRAINT "PK_d6b6741a4454c73aac186c1cf74" PRIMARY KEY ("id"))`)
         await db.query(`ALTER TABLE "event" ADD CONSTRAINT "FK_129efedcb305c80256db2d57a59" FOREIGN KEY ("extrinsic_id") REFERENCES "extrinsic"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "event" ADD CONSTRAINT "FK_2b0d35d675c4f99751855c45021" FOREIGN KEY ("block_id") REFERENCES "block"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "account" ADD CONSTRAINT "FK_d9c630ee6c2f1bcc56e46bab5a8" FOREIGN KEY ("block_id") REFERENCES "block"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
@@ -418,6 +419,7 @@ module.exports = class Data1684171397160 {
         await db.query(`DROP INDEX "public"."IDX_6ee1999545992b2cd1ba1f1f65"`)
         await db.query(`DROP INDEX "public"."IDX_c4f2c390140b9ff847dae45002"`)
         await db.query(`DROP INDEX "public"."IDX_e837120901fd17225e43f7d421"`)
+        await db.query(`DROP TABLE "pusher_message"`)
         await db.query(`ALTER TABLE "event" DROP CONSTRAINT "FK_129efedcb305c80256db2d57a59"`)
         await db.query(`ALTER TABLE "event" DROP CONSTRAINT "FK_2b0d35d675c4f99751855c45021"`)
         await db.query(`ALTER TABLE "account" DROP CONSTRAINT "FK_d9c630ee6c2f1bcc56e46bab5a8"`)

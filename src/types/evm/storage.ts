@@ -1,6 +1,5 @@
 import {sts, Block, Bytes, Option, Result, StorageType, RuntimeCtx} from '../support'
 import * as v5 from '../v5'
-import * as v10 from '../v10'
 
 export const accounts =  {
     /**
@@ -115,20 +114,4 @@ export const extrinsicOrigin =  {
 export interface ExtrinsicOriginV5  {
     is(block: RuntimeCtx): boolean
     get(block: Block): Promise<(v5.AccountId | undefined)>
-}
-
-export const queuedEvents =  {
-    /**
-     *  Queued Events
-     */
-    v10: new StorageType('EVM.QueuedEvents', 'Default', [], sts.array(() => v10.Type_276)) as QueuedEventsV10,
-}
-
-/**
- *  Queued Events
- */
-export interface QueuedEventsV10  {
-    is(block: RuntimeCtx): boolean
-    getDefault(block: Block): v10.Type_276[]
-    get(block: Block): Promise<(v10.Type_276[] | undefined)>
 }

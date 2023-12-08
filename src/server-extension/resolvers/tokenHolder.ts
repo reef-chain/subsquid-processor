@@ -2,24 +2,11 @@ import { BigInteger, Int } from '@subsquid/graphql-server';
 import { Arg, Field, InputType, Mutation, ObjectType, Query, Resolver } from 'type-graphql'
 import { EntityManager, In } from 'typeorm'
 import { Account, TokenHolder, TokenHolderType, VerifiedContract } from '../../model';
-import Pusher from "pusher";
-import { PusherData } from '../../interfaces/interfaces';
+import { NewBlockData } from "../../interfaces/interfaces";
+import { FirebaseDB } from '../../firebase/firebase';
 
-let pusher: Pusher;
-const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
-const PUSHER_EVENT = process.env.PUSHER_EVENT;
-if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
-  pusher = new Pusher({
-    appId: process.env.PUSHER_APP_ID!,
-    key: process.env.PUSHER_KEY!,
-    secret: process.env.PUSHER_SECRET!,
-    cluster: process.env.PUSHER_CLUSTER || "eu",
-    useTLS: true
-  });
-  console.log('Pusher enabled for API: true');
-} else {
-  console.log('Pusher enabled for API: false');
-}
+const firebaseDB = process.env.NOTIFY_NEW_BLOCKS === 'true' ? new FirebaseDB() : null;
+console.log(`Notify new blocks for API: ${!!firebaseDB}`);
 
 @InputType()
 export class TokenHolderInput {
@@ -102,7 +89,7 @@ export class TokenHolderResolver {
 
     await manager.save(entities);
 
-    if (pusher) {
+    if (firebaseDB) {
       const updatedErc20Accounts = entities
         .filter(t => t.token.type === 'ERC20' && t.signer?.id !== '')
         .map(t => t.signer!.id as string)
@@ -116,7 +103,14 @@ export class TokenHolderResolver {
         .map(t => t.signer!.id as string)
         .filter((value, index, array) => array.indexOf(value) === index);
       
-      const data: PusherData = {
+      if (!updatedErc20Accounts.length 
+        && !updatedErc721Accounts.length 
+        && !updatedErc1155Accounts.length
+      ) {
+        return true;
+      }
+
+      const data: NewBlockData = {
         blockHeight: -1,
         blockId: '',
         blockHash: '',
@@ -129,7 +123,7 @@ export class TokenHolderResolver {
         updatedContracts: [],
       };
 
-      pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
+      firebaseDB.notifyBlock(data);
     }
 
     return true;

@@ -1,17 +1,11 @@
 import {sts, Block, Bytes, Option, Result, StorageType, RuntimeCtx} from '../support'
 import * as v5 from '../v5'
-import * as v8 from '../v8'
-import * as v10 from '../v10'
 
 export const account =  {
     /**
      *  The full account information for a particular account ID.
      */
     v5: new StorageType('System.Account', 'Default', [v5.AccountId], v5.AccountInfo) as AccountV5,
-    /**
-     *  The full account information for a particular account ID.
-     */
-    v8: new StorageType('System.Account', 'Default', [v8.AccountId], v8.AccountInfo) as AccountV8,
 }
 
 /**
@@ -30,24 +24,6 @@ export interface AccountV5  {
     getPairs(block: Block, key: v5.AccountId): Promise<[k: v5.AccountId, v: (v5.AccountInfo | undefined)][]>
     getPairsPaged(pageSize: number, block: Block): AsyncIterable<[k: v5.AccountId, v: (v5.AccountInfo | undefined)][]>
     getPairsPaged(pageSize: number, block: Block, key: v5.AccountId): AsyncIterable<[k: v5.AccountId, v: (v5.AccountInfo | undefined)][]>
-}
-
-/**
- *  The full account information for a particular account ID.
- */
-export interface AccountV8  {
-    is(block: RuntimeCtx): boolean
-    getDefault(block: Block): v8.AccountInfo
-    get(block: Block, key: v8.AccountId): Promise<(v8.AccountInfo | undefined)>
-    getMany(block: Block, keys: v8.AccountId[]): Promise<(v8.AccountInfo | undefined)[]>
-    getKeys(block: Block): Promise<v8.AccountId[]>
-    getKeys(block: Block, key: v8.AccountId): Promise<v8.AccountId[]>
-    getKeysPaged(pageSize: number, block: Block): AsyncIterable<v8.AccountId[]>
-    getKeysPaged(pageSize: number, block: Block, key: v8.AccountId): AsyncIterable<v8.AccountId[]>
-    getPairs(block: Block): Promise<[k: v8.AccountId, v: (v8.AccountInfo | undefined)][]>
-    getPairs(block: Block, key: v8.AccountId): Promise<[k: v8.AccountId, v: (v8.AccountInfo | undefined)][]>
-    getPairsPaged(pageSize: number, block: Block): AsyncIterable<[k: v8.AccountId, v: (v8.AccountInfo | undefined)][]>
-    getPairsPaged(pageSize: number, block: Block, key: v8.AccountId): AsyncIterable<[k: v8.AccountId, v: (v8.AccountInfo | undefined)][]>
 }
 
 export const extrinsicCount =  {
@@ -199,14 +175,6 @@ export const events =  {
      *  Events deposited for the current block.
      */
     v5: new StorageType('System.Events', 'Default', [], sts.array(() => v5.EventRecord)) as EventsV5,
-    /**
-     *  Events deposited for the current block.
-     */
-    v8: new StorageType('System.Events', 'Default', [], sts.array(() => v8.EventRecord)) as EventsV8,
-    /**
-     *  Events deposited for the current block.
-     */
-    v10: new StorageType('System.Events', 'Default', [], sts.array(() => v10.EventRecord)) as EventsV10,
 }
 
 /**
@@ -216,24 +184,6 @@ export interface EventsV5  {
     is(block: RuntimeCtx): boolean
     getDefault(block: Block): v5.EventRecord[]
     get(block: Block): Promise<(v5.EventRecord[] | undefined)>
-}
-
-/**
- *  Events deposited for the current block.
- */
-export interface EventsV8  {
-    is(block: RuntimeCtx): boolean
-    getDefault(block: Block): v8.EventRecord[]
-    get(block: Block): Promise<(v8.EventRecord[] | undefined)>
-}
-
-/**
- *  Events deposited for the current block.
- */
-export interface EventsV10  {
-    is(block: RuntimeCtx): boolean
-    getDefault(block: Block): v10.EventRecord[]
-    get(block: Block): Promise<(v10.EventRecord[] | undefined)>
 }
 
 export const eventCount =  {
@@ -357,22 +307,4 @@ export const executionPhase =  {
 export interface ExecutionPhaseV5  {
     is(block: RuntimeCtx): boolean
     get(block: Block): Promise<(v5.Phase | undefined)>
-}
-
-export const upgradedToTripleRefCount =  {
-    /**
-     *  True if we have upgraded so that AccountInfo contains three types of `RefCount`. False
-     *  (default) if not.
-     */
-    v8: new StorageType('System.UpgradedToTripleRefCount', 'Default', [], sts.boolean()) as UpgradedToTripleRefCountV8,
-}
-
-/**
- *  True if we have upgraded so that AccountInfo contains three types of `RefCount`. False
- *  (default) if not.
- */
-export interface UpgradedToTripleRefCountV8  {
-    is(block: RuntimeCtx): boolean
-    getDefault(block: Block): boolean
-    get(block: Block): Promise<(boolean | undefined)>
 }

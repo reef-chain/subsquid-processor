@@ -206,7 +206,7 @@ export interface IdentityData {
     web: string;
 }
 
-export interface PusherData {
+export interface NewBlockData {
     blockHeight: number;
     blockId: string;
     blockHash: string;

@@ -26,7 +26,7 @@ type Extrinsic @entity @index(fields: ["timestamp", "id"], unique: true) @index(
   id: ID!
   block: Block!
   index: Int! @index
-  hash: String! @index
+  hash: String! @index @unique
   args: JSON!
   docs: String!
   method: String! @index
@@ -119,6 +119,7 @@ type Transfer @entity @index(fields: ["id", "extrinsic"], unique: true) @index (
   toEvmAddress: String @index
   fromEvmAddress: String @index
   type: TransferType!
+  reefswapAction: ReefswapAction
   amount: BigInt! @index
   feeAmount: BigInt! @index
   denom: String @index
@@ -194,14 +195,6 @@ type Staking @entity {
   timestamp: DateTime!
 }
 
-# ===================== Pusher ============================
-
-type PusherMessage @entity {
-  "Block ID"
-  id: ID!
-  data: String!
-}
-
 # ===================== Enums =============================
 
 enum EvmEventType {
@@ -226,6 +219,12 @@ enum TransferType {
   ERC20, 
   ERC721, 
   ERC1155
+}
+
+enum ReefswapAction {
+  AddLiquidity,
+  RemoveLiquidity,
+  Swap
 }
 
 enum TokenHolderType {

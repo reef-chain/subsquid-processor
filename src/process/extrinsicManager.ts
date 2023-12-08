@@ -41,7 +41,7 @@ export class ExtrinsicManager {
             id: event.extrinsic!.id,
             blockId: event.block.id,
             index: event.extrinsic!.index,
-            hash: event.extrinsic!.hash,
+            hash: `${event.extrinsic!.hash}-${event.block.hash.substring(2, 7)}`,
             args: event.extrinsic!.call!.args ? Object.keys(event.extrinsic!.call!.args).map(key => event.extrinsic!.call!.args[key]) : [],
             docs: docs,
             method: toCamelCase(method),
