@@ -66,6 +66,7 @@ export const processErc1155SingleTransfer = async (
         toEvmAddress: toChecksumAddress(to),
         fromEvmAddress: toChecksumAddress(from),
         type: TransferType.ERC1155,
+        reefswapAction: null,
         amount: BigInt(value.toString()),
         success: true,
         timestamp: new Date(event.block.timestamp!),

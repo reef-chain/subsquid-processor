@@ -34,6 +34,7 @@ export const processNativeTransfer = async (
         fromEvmAddress: fromAccountData.evmAddress,
         toEvmAddress: toAccountData.evmAddress,
         type: TransferType.Native,
+        reefswapAction: null,
         amount: BigInt(amount),
         success: event.extrinsic!.success,
         timestamp: new Date(event.block.timestamp!),

@@ -67,6 +67,7 @@ export const processErc721Transfer = async (
         toEvmAddress: toChecksumAddress(to),
         fromEvmAddress: toChecksumAddress(from),
         type: TransferType.ERC721,
+        reefswapAction: null,
         amount: BigInt('1'),
         success: true,
         timestamp: new Date(event.block.timestamp!),

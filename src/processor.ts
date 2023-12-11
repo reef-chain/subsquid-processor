@@ -29,6 +29,7 @@ console.log('\nNETWORK=',network, ' RPC=', RPC_URL, ' AQUARIUM_ARCHIVE_NAME=', A
 // const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME, { release: 'ArrowSquid' });
 const ARCHIVE = `https://v2.archive.subsquid.io/network/${AQUARIUM_ARCHIVE_NAME}`;
 const START_BLOCK = parseInt(process.env.START_BLOCK || '0');
+export const REEFSWAP_ROUTER_ADDRESS = process.env[`REEFSWAP_ROUTER_ADDRESS_${network.toUpperCase()}`];
 
 const database = new TypeormDatabase();
 const fields = {

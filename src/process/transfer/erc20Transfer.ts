@@ -7,6 +7,7 @@ import { findNativeAddress, REEF_CONTRACT_ADDRESS, toChainContext, toChecksumAdd
 import { AccountManager } from "../accountManager";
 import { TokenHolderManager } from "../tokenHolderManager";
 import { ctx, Fields, headReached } from "../../processor";
+import { extractReefswapRouterData } from "./reefswapRouterData";
 
 export const processErc20Transfer = async (
     event: Event<Fields>,
@@ -47,6 +48,8 @@ export const processErc20Transfer = async (
         tokenHolderManager.process(fromAddress, fromEvmAddress, BigInt(fromBalance.toString()), event.block.timestamp!, token);
     }
 
+    const reefswapAction = extractReefswapRouterData(event, tokenAddress);
+
     const transferData = {
         id: event.id,
         blockId: event.block.id,
@@ -57,6 +60,7 @@ export const processErc20Transfer = async (
         toEvmAddress: toEvmAddress,
         fromEvmAddress: fromEvmAddress,
         type: TransferType.ERC20,
+        reefswapAction: reefswapAction,
         amount: BigInt(value.toString()),
         success: true,
         timestamp: new Date(event.block.timestamp!),
