@@ -12,8 +12,8 @@ import { getBalancesAccount } from "../util/balances/balances";
 
 const updateAccounts = async (accounts: Account[], blockHeader: BlockHeader<Fields>) => {
     // Get current EVM addresses, native balances and identities
-    const addresses = accounts.map((a) => { return ss58.decode(a.id).bytes }); // TODO ???
-    const [evmAddresses, balances, identities] = await Promise.all([
+    const addresses = accounts.map((a) => { return ss58.decode(a.id).bytes });
+    let [evmAddresses, balances, identities] = await Promise.all([
         getEvmAddresses(blockHeader, addresses),
         getNativeBalances(blockHeader, addresses),
         getIdentities(blockHeader, addresses)
@@ -33,7 +33,8 @@ const updateAccounts = async (accounts: Account[], blockHeader: BlockHeader<Fiel
     });
 
     // Get and update EVM nonces
-    if (evmAddresses) {
+    evmAddresses = evmAddresses?.filter((a) => a !== '');
+    if (evmAddresses?.length) {
         const evmNonces = await getEvmNonces(blockHeader, evmAddresses);
         if (evmNonces && evmNonces.size > 0) {
             accounts.forEach((account) => {
@@ -92,9 +93,9 @@ const getEvmAddresses = async(blockHeader: BlockHeader<Fields>, addresses: strin
     if (storageV5.is(blockHeader)) {
         const res = await storageV5.getMany(blockHeader, addresses);
         return res.map((r) => r ? r : '');
-    } else {
-        throw new Error("Unknown storage version");
     }
+
+    return undefined;
 }
 
 const getIdentities = async (blockHeader: BlockHeader<Fields>, addresses: string[]) => {
@@ -102,9 +103,9 @@ const getIdentities = async (blockHeader: BlockHeader<Fields>, addresses: string
         if (storageV5.is(blockHeader)) {
         const identityRaws = await storageV5.getMany(blockHeader, addresses);
         return identityRaws.map(identityRaw => extractIdentity(identityRaw));
-    } else {
-        throw new Error("Unknown storage version");
     }
+    
+    return undefined;
 }
 
 const getEvmNonces = async (blockHeader: BlockHeader<Fields>, evmAddresses: string[]) => {
@@ -113,7 +114,7 @@ const getEvmNonces = async (blockHeader: BlockHeader<Fields>, evmAddresses: stri
     if (storageV5.is(blockHeader)) {
         accountsInfo = await storageV5.getMany(blockHeader, evmAddresses);
     } else {
-        throw new Error("Unknown storage version");
+        return undefined;
     }
 
     const evmNonces: Map<string, number> = new Map();

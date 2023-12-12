@@ -18,18 +18,6 @@ const getAccountBalancesBase = async (address: string, blockHeader: BlockHeader<
         }
     }
 
-    // TODO v10 not available. Is it needed?
-    // const storageV10 = system.account.v10;
-    // if (storageV10.is(blockHeader)) {
-    //     const accountInfo: AccountInfo | undefined = await storageV10.get(blockHeader, address);
-    //     return {
-    //         freeBalance: accountInfo ? BigInt(accountInfo.data.free) : BigInt(0),
-    //         reservedBalance: accountInfo ? BigInt(accountInfo.data.reserved) : BigInt(0),
-    //         votingBalance: accountInfo ? BigInt(accountInfo.data.free) : BigInt(0),
-    //         accountNonce: accountInfo ? accountInfo.nonce : 0
-    //     }
-    // }
-
     return {
         freeBalance: BigInt(0),
         reservedBalance: BigInt(0),

@@ -3,6 +3,7 @@ import { ContractData } from "../interfaces/interfaces";
 import { Account, Contract, Extrinsic } from "../model";
 import { ctx, Fields } from "../processor";
 import { hexToNativeAddress, toChecksumAddress } from "../util/util";
+import { DataString } from "../util/interfaces";
 
 export class ContractManager {  
     contractsData: ContractData[] = [];
@@ -20,11 +21,12 @@ export class ContractManager {
 
         const bytecode = event.call.args.init;
         const { context, args } = this.preprocessBytecode(bytecode);
+        const signerAddress = hexToNativeAddress((event.extrinsic!.signature!.address as DataString).value);
     
         const contractData = {
             id: toChecksumAddress(address),
             extrinsicId: event.extrinsic!.id,
-            signerAddress: hexToNativeAddress(event.extrinsic!.signature!.address as string),
+            signerAddress: signerAddress,
             bytecode: bytecode,
             bytecodeContext: context,
             bytecodeArguments: args,

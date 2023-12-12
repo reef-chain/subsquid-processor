@@ -25,9 +25,7 @@ if (!network) {
 const RPC_URL = process.env[`NODE_RPC_WS_${network.toUpperCase()}`];
 const AQUARIUM_ARCHIVE_NAME = process.env[`ARCHIVE_LOOKUP_NAME_${network.toUpperCase()}`] as KnownArchives;
 console.log('\nNETWORK=',network, ' RPC=', RPC_URL, ' AQUARIUM_ARCHIVE_NAME=', AQUARIUM_ARCHIVE_NAME);
-// TODO: Use lookupArchive() when Reef archive is available
-// const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME, { release: 'ArrowSquid' });
-const ARCHIVE = `https://v2.archive.subsquid.io/network/${AQUARIUM_ARCHIVE_NAME}`;
+const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME, { release: 'ArrowSquid' });
 const START_BLOCK = parseInt(process.env.START_BLOCK || '0');
 export const REEFSWAP_ROUTER_ADDRESS = process.env[`REEFSWAP_ROUTER_ADDRESS_${network.toUpperCase()}`];
 
@@ -42,14 +40,16 @@ const fields = {
     error: true,
     hash: true,
     version: true,
-    call: true
+  },
+  call: {
+    name: true,
+    args: true,
   },
   block: {
     timestamp: true,
     stateRoot: true,
     extrinsicsRoot: true,
     validator: true,
-    _runtime: true,
   }
 };
 export type Fields = typeof fields;
@@ -57,15 +57,15 @@ export type Fields = typeof fields;
 const processor = new SubstrateBatchProcessor()
   .setBlockRange({ from: START_BLOCK })
   .setDataSource({ chain: { url: RPC_URL!, rateLimit: 10 }, archive: ARCHIVE })
-  .addEvent({}) // Process all events
-  .includeAllBlocks() // Force the processor to fetch the header data for all the blocks
+  .addEvent({ call: true, extrinsic: true })
+  .addCall({})
+  .includeAllBlocks()
   .setFields(fields);
 
 export let reefVerifiedContract: VerifiedContract;
 export let emptyAccount: Account;
 export let emptyExtrinsic: Extrinsic;
 export let ctx: DataHandlerContext<Store, Fields>;
-// export let modules: MetadataModule[];
 export let headReached = process.env.HEAD_REACHED === 'true'; // default to false
 export const pinToIPFSEnabled = process.env.PIN_TO_IPFS !== 'false'; // default to true
 console.log(`Head reached: ${headReached}`);
@@ -112,13 +112,6 @@ processor.run(database, async (ctx_) => {
     } else {
       throw new Error('Empty extrinsic not found in the database');
     }
-
-    // const modules_ = await fetchModules(ctx.blocks[0].header);
-    // if (modules_.length) {
-    //   modules = modules_;
-    // } else {
-    //   throw new Error('Metadata modules not found');
-    // }
 
     isFirstBatch = false;
   }

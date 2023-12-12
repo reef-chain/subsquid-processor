@@ -242,7 +242,7 @@ export class AccountManager {
         };
         let evmNonce = 0;
 
-        const addressBytes = ss58.decode(address).bytes; // TODO ??
+        const addressBytes = ss58.decode(address).bytes;
         if (headReached) {
             // We start updating balances and identity only after the head block has been reached
             let evmAddress;
@@ -288,9 +288,9 @@ export class AccountManager {
                     return res;
                 }
             );
-        } else {
-            throw new Error("Unknown storage version");
         }
+
+        return undefined;
     }
 
     private async getIdentity(blockHeader: BlockHeader<Fields>, address: string) {
@@ -298,9 +298,9 @@ export class AccountManager {
         if (storageV5.is(blockHeader)) {
             const identityRaw = await storageV5.get(blockHeader, address);
             return extractIdentity(identityRaw);
-        } else {
-            throw new Error("Unknown storage version");
         }
+
+        return undefined;
     }
 
     private async getEvmNonce(blockHeader: BlockHeader<Fields>, evmAddress: string) {
@@ -310,9 +310,9 @@ export class AccountManager {
         if (storageV5.is(blockHeader)) {
             const accountInfo = await storageV5.get(blockHeader, evmAddress);
             return accountInfo?.nonce || 0;
-        } else {
-            throw new Error("Unknown storage version");
         }
+
+        return 0;
     }
 }
 

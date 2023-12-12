@@ -4,6 +4,7 @@ import { Block, Extrinsic, ExtrinsicStatus, ExtrinsicType } from "../model";
 import { Fields, ctx } from "../processor";
 import { getFeeDetails, getPaymentInfo } from "../util/extrinsic";
 import { getDocs, getErrorMessage, hexToNativeAddress, toCamelCase } from "../util/util";
+import { DataString } from "../util/interfaces";
 
 export class ExtrinsicManager {  
     extrinsicsData: Map<string, ExtrinsicData> = new Map();
@@ -14,11 +15,13 @@ export class ExtrinsicManager {
         let signer = "";
         let signedData = null;
         if (event.extrinsic?.signature?.address) {
-            signer = hexToNativeAddress(event.extrinsic!.signature!.address as string);
+            const address = (event.extrinsic!.signature!.address as DataString).value;
+            signer = hexToNativeAddress(address);
             const [fee, feeDetails] = await Promise.all([
                 getPaymentInfo(event, event.block.parentHash),
                 getFeeDetails(event, event.block.parentHash)
             ]);
+            // TODO: partial fee calculation https://github.com/reef-chain/minimal-ui-example/commit/6ff29a5475a01a13ee35bc9cc639a9ae9024d3b6
             fee.partialFee = fee.partialFee && BigInt(fee.partialFee) || BigInt(0);
             feeDetails.inclusionFee.baseFee = feeDetails.inclusionFee?.baseFee && BigInt(feeDetails.inclusionFee.baseFee) || BigInt(0);
             feeDetails.inclusionFee.lenFee = feeDetails.inclusionFee?.lenFee && BigInt(feeDetails.inclusionFee.lenFee) || BigInt(0);

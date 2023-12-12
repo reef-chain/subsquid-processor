@@ -5,18 +5,9 @@ import {
   Runtime,
 } from "@subsquid/substrate-runtime";
 import { ERC20Data, IdentityData } from "../interfaces/interfaces";
-// import { modules } from "../processor";
 import { evmAccounts } from "../types/storage";
 import { Data_Raw5, Registration } from "../types/v5";
-import { MetadataModule } from "./interfaces";
-// import {
-//   decodeMetadata,
-//   ModuleMetadataV9,
-//   ModuleMetadataV10,
-//   ModuleMetadataV11,
-//   ModuleMetadataV12,
-//   ModuleMetadataV13
-// } from '@subsquid/substrate-metadata'
+import { FunctionMetadataV9, Metadata, MetadataModule } from "./interfaces";
 
 export const REEF_CONTRACT_ADDRESS = '0x0000000000000000000000000000000001000000';
 export const REEF_DEFAULT_DATA: ERC20Data = {
@@ -67,16 +58,6 @@ export const toCamelCase = (input: string): string => {
     return result[0].toLowerCase() + result.substring(1);
 }
 
-// export const fetchModules = async (blockHeader: BlockHeader): Promise<any> => {
-//   const rawMetadata: string = await ctx._chain.rpc.call("state_getMetadata", [blockHeader.hash]);
-//   const metadata = decodeMetadata(rawMetadata);
-//   let modules: MetadataModule[] = [];
-//   if ((metadata as any).value?.modules?.length) {
-//     modules = (metadata as any).value.modules;
-//   }
-//   return modules;
-// }
-
 export const sleep = async (ms: number): Promise<void> => new Promise((res) => setTimeout(res, ms));
 
 const extractJudgements = (judgements: [number, any][]): [number, any][] => {
@@ -123,8 +104,8 @@ export const extractIdentity = (identityRaw: Registration | undefined): Partial<
 }
 
 export const getErrorMessage = (runtime: Runtime, error: any, section: string): string => {
-  const modules = (runtime.metadata.value) as unknown as MetadataModule[];
-  const module = modules.find((module: MetadataModule) => module.name === section);
+  const metadata = (runtime.metadata.value) as unknown as Metadata;
+  const module = metadata.modules.find((module: MetadataModule) => module.name === section);
 
   let errorMessage = "";
   if (error.value?.error) {
@@ -137,12 +118,12 @@ export const getErrorMessage = (runtime: Runtime, error: any, section: string): 
 }
 
 export const getDocs = (runtime: Runtime, section: string, method: string): string => {
-  const modules = (runtime.metadata.value) as unknown as MetadataModule[];
-  const module = modules.find((module: MetadataModule) => module.name === section);
+  const metadata = (runtime.metadata.value) as unknown as Metadata;
+  const module = metadata.modules.find((module: MetadataModule) => module.name === section);
 
   let docs = [""];
   if (module && module.calls) {
-    const call = module.calls.find((call) => call.name === method);
+    const call = module.calls.find((call: FunctionMetadataV9) => call.name === method);
     if (call) {
       docs = call.docs;
     }

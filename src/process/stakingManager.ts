@@ -16,7 +16,7 @@ export class StakingManager {
     
         await accountManager.process(signerAddress, event.block);
     
-        const addressBytes = ss58.decode(signerAddress).bytes; // TODO: ??
+        const addressBytes = ss58.decode(signerAddress).bytes;
         const rewardDestination = await this.getStakingPayee(event.block, addressBytes);
         // If account has specified different reward destination we switch the staking signer to that one
         if (rewardDestination?.__kind === 'Account' && rewardDestination.value) {
@@ -71,9 +71,9 @@ export class StakingManager {
         const storageV5 = staking.payee.v5;
         if (storageV5.is(blockHeader)) {
             return storageV5.get(blockHeader, address);
-        } else {
-            throw new Error("Unknown storage version");
         }
+
+        return undefined;
     }
 }
 

@@ -1,4 +1,3 @@
-// import { encodeExtrinsic, ExtrinsicSignature } from '@subsquid/substrate-metadata'
 import { Event, toHex } from '@subsquid/substrate-processor'
 import { Extrinsic } from "@subsquid/substrate-runtime";
 import { ctx, Fields } from '../processor'
@@ -6,44 +5,32 @@ import { ctx, Fields } from '../processor'
 /**
  * Encode "archived" extrinsic back to hex from SubstrateBatchProcessor mapping handler
  */
-// const encodeSubstrateExtrinsic = (ex: SubstrateExtrinsic): string => {
 const encodeSubstrateExtrinsic = (event: Event<Fields>): string => {
-    // let {scaleCodec, jsonCodec} = (ctx._chain as any)
+    const { jsonCodec, description } = event.block._runtime;
 
-    // let signature: ExtrinsicSignature | undefined
-    // if (ex.signature) {
-    //     signature = jsonCodec.decode(ctx._chain.description.signature, ex.signature)
-    // }
+    let signature: any;
+    if (event.extrinsic!.signature) {
+        signature = jsonCodec.decode(description.signature, event.extrinsic!.signature!)
+    }
 
-    // let [pallet, callName] = ex.call.name.split('.')
-
-    // let call = jsonCodec.decode(ctx._chain.description.call, {
-    //     __kind: pallet,
-    //     value: {
-    //         ...ex.call.args,
-    //         __kind: callName
-    //     }
-    // })
-
-    // let bytes = encodeExtrinsic(
-    //     {
-    //         version: ex.version,
-    //         signature,
-    //         call
-    //     },
-    //     ctx._chain.description,
-    //     scaleCodec
-    // )
-
+    const extrinsicCall = event.extrinsic!.call!;
+    const [pallet, callName] = extrinsicCall.name.split('.')
+    const call = jsonCodec.decode(description.call, {
+        __kind: pallet,
+        value: {
+            ...extrinsicCall.args,
+            __kind: callName
+        }
+    })
+    
     const extrinsic: Extrinsic = {
         version: event.extrinsic!.version,
-        signature: event.extrinsic!.signature,
-        call: event.extrinsic!.call!.args
+        signature: signature,
+        call: call
     }
-    // TODO check this
-
+    
     const bytes = event.block._runtime.encodeExtrinsic(extrinsic);
-
+    
     return toHex(bytes)
 }
 

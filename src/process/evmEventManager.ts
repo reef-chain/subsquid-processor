@@ -1,7 +1,7 @@
 import { Event } from "@subsquid/substrate-processor";
 import { Store } from "@subsquid/typeorm-store";
 import { AccountManager } from "./accountManager";
-import { EvmEventData } from "../interfaces/interfaces";
+import { ABIS, EvmEventData } from "../interfaces/interfaces";
 import { Block, Event as EventModel, EvmEvent, EvmEventStatus, EvmEventType, VerifiedContract } from "../model";
 import { toChecksumAddress } from "../util/util";
 import { TransferManager } from "./transferManager";
@@ -35,7 +35,7 @@ export class EvmEventManager {
             contractAddress = toChecksumAddress(event.args.address);
             const contract = await store!.get(VerifiedContract, contractAddress);
             if (contract) {
-                const iface = new ethers.Interface(contract.compiledData as ethers.InterfaceAbi);
+                const iface = new ethers.Interface((contract.compiledData as ABIS)[contract.name]);
                 const topics = event.args.topics;
                 const data = event.args.data;
                 dataParsed = iface.parseLog({ topics, data });
