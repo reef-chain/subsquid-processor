@@ -7,9 +7,20 @@ import { AccountInfo, BalanceLock } from "../../types/v5";
 const VESTING_ID = '0x76657374696e6720';
 
 const getAccountBalancesBase = async (address: string, blockHeader: BlockHeader<Fields>): Promise<AccountBalancesBase> => {
-    const storageV5 = system.account.v5
+    const storageV5 = system.account.v5;
     if (storageV5.is(blockHeader)) {
         const accountInfo: AccountInfo | undefined = await storageV5.get(blockHeader, address);
+        return {
+            freeBalance: accountInfo ? BigInt(accountInfo.data.free) : BigInt(0),
+            reservedBalance: accountInfo ? BigInt(accountInfo.data.reserved) : BigInt(0),
+            votingBalance: accountInfo ? BigInt(accountInfo.data.free) : BigInt(0),
+            accountNonce: accountInfo ? accountInfo.nonce : 0
+        }
+    }
+
+    const storageV8 = system.account.v8;
+    if (storageV8.is(blockHeader)) {
+        const accountInfo: AccountInfo | undefined = await storageV8.get(blockHeader, address);
         return {
             freeBalance: accountInfo ? BigInt(accountInfo.data.free) : BigInt(0),
             reservedBalance: accountInfo ? BigInt(accountInfo.data.reserved) : BigInt(0),

@@ -1,5 +1,6 @@
 import {sts, Block, Bytes, Option, Result, StorageType, RuntimeCtx} from '../support'
 import * as v5 from '../v5'
+import * as v8 from '../v8'
 
 export const totalIssuance =  {
     /**
@@ -91,4 +92,29 @@ export interface StorageVersionV5  {
     is(block: RuntimeCtx): boolean
     getDefault(block: Block): v5.Releases
     get(block: Block): Promise<(v5.Releases | undefined)>
+}
+
+export const reserves =  {
+    /**
+     *  Named reserves on some account balances.
+     */
+    v8: new StorageType('Balances.Reserves', 'Default', [v8.AccountId], sts.array(() => v8.ReserveData)) as ReservesV8,
+}
+
+/**
+ *  Named reserves on some account balances.
+ */
+export interface ReservesV8  {
+    is(block: RuntimeCtx): boolean
+    getDefault(block: Block): v8.ReserveData[]
+    get(block: Block, key: v8.AccountId): Promise<(v8.ReserveData[] | undefined)>
+    getMany(block: Block, keys: v8.AccountId[]): Promise<(v8.ReserveData[] | undefined)[]>
+    getKeys(block: Block): Promise<v8.AccountId[]>
+    getKeys(block: Block, key: v8.AccountId): Promise<v8.AccountId[]>
+    getKeysPaged(pageSize: number, block: Block): AsyncIterable<v8.AccountId[]>
+    getKeysPaged(pageSize: number, block: Block, key: v8.AccountId): AsyncIterable<v8.AccountId[]>
+    getPairs(block: Block): Promise<[k: v8.AccountId, v: (v8.ReserveData[] | undefined)][]>
+    getPairs(block: Block, key: v8.AccountId): Promise<[k: v8.AccountId, v: (v8.ReserveData[] | undefined)][]>
+    getPairsPaged(pageSize: number, block: Block): AsyncIterable<[k: v8.AccountId, v: (v8.ReserveData[] | undefined)][]>
+    getPairsPaged(pageSize: number, block: Block, key: v8.AccountId): AsyncIterable<[k: v8.AccountId, v: (v8.ReserveData[] | undefined)][]>
 }

@@ -34,7 +34,6 @@ const encodeSubstrateExtrinsic = (event: Event<Fields>): string => {
     return toHex(bytes)
 }
 
-
 /**
  * Check out https://github.com/paritytech/substrate-api-sidecar/blob/a0f7d7800fe639eef95906bbd5c0315b277a48f1/src/services/blocks/BlocksService.ts#L265
  * for how to use functions below to correctly calculate actual extrinsic fee.
@@ -48,7 +47,6 @@ export const getFeeDetails = async (event: Event<Fields>, parentBlockHash: strin
         parentBlockHash
     ])
 }
-
 
 export const getPaymentInfo = async (event: Event<Fields>, parentBlockHash: string): Promise<any> => {
     return ctx._chain.rpc.call('payment_queryInfo', [

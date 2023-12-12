@@ -1,10 +1,17 @@
-import { Event } from "@subsquid/substrate-processor";
+import { BlockHeader, Event } from "@subsquid/substrate-processor";
 import { ExtrinsicData } from "../interfaces/interfaces";
 import { Block, Extrinsic, ExtrinsicStatus, ExtrinsicType } from "../model";
 import { Fields, ctx } from "../processor";
 import { getFeeDetails, getPaymentInfo } from "../util/extrinsic";
 import { getDocs, getErrorMessage, hexToNativeAddress, toCamelCase } from "../util/util";
 import { DataString } from "../util/interfaces";
+import { system } from "../types/storage";
+import { EventRecord as EventRecordV5, SystemEvent_ExtrinsicSuccess as ExtrinsicSuccessV5 } from "../types/v5";
+import { EventRecord as EventRecordV8, SystemEvent_ExtrinsicSuccess as ExtrinsicSuccessV8 } from "../types/v8";
+import { EventRecord as EventRecordV10, SystemEvent_ExtrinsicSuccess as ExtrinsicSuccessV10 } from "../types/v10";
+
+type EventRecord = EventRecordV5 | EventRecordV8 | EventRecordV10;
+type SystemEvent_ExtrinsicSuccess = ExtrinsicSuccessV5 | ExtrinsicSuccessV8 | ExtrinsicSuccessV10;
 
 export class ExtrinsicManager {  
     extrinsicsData: Map<string, ExtrinsicData> = new Map();
@@ -17,16 +24,7 @@ export class ExtrinsicManager {
         if (event.extrinsic?.signature?.address) {
             const address = (event.extrinsic!.signature!.address as DataString).value;
             signer = hexToNativeAddress(address);
-            const [fee, feeDetails] = await Promise.all([
-                getPaymentInfo(event, event.block.parentHash),
-                getFeeDetails(event, event.block.parentHash)
-            ]);
-            // TODO: partial fee calculation https://github.com/reef-chain/minimal-ui-example/commit/6ff29a5475a01a13ee35bc9cc639a9ae9024d3b6
-            fee.partialFee = fee.partialFee && BigInt(fee.partialFee) || BigInt(0);
-            feeDetails.inclusionFee.baseFee = feeDetails.inclusionFee?.baseFee && BigInt(feeDetails.inclusionFee.baseFee) || BigInt(0);
-            feeDetails.inclusionFee.lenFee = feeDetails.inclusionFee?.lenFee && BigInt(feeDetails.inclusionFee.lenFee) || BigInt(0);
-            feeDetails.inclusionFee.adjustedWeightFee = feeDetails.inclusionFee?.adjustedWeightFee && BigInt(feeDetails.inclusionFee.adjustedWeightFee) || BigInt(0);
-            signedData = { fee, feeDetails };
+            signedData = await this.getSignedData(event);
         }
             
         const [section, method] = event.extrinsic!.call!.name.split(".");
@@ -81,6 +79,63 @@ export class ExtrinsicManager {
         await ctx.store.insert([...extrinsics.values()]);
     
         return extrinsics;
+    }
+
+    // https://substrate.stackexchange.com/questions/2637/determining-the-final-fee-from-a-client/4224#4224
+    private async getSignedData(event: Event<Fields>) {
+        const [fee, feeDetails, systemEvents] = await Promise.all([
+            getPaymentInfo(event, event.block.parentHash),
+            getFeeDetails(event, event.block.parentHash),
+            this.getSystemEvents(event.block)
+        ]);
+
+        const baseFee = feeDetails.inclusionFee?.baseFee && BigInt(feeDetails.inclusionFee.baseFee) || BigInt(0);
+        const lenFee = feeDetails.inclusionFee?.lenFee && BigInt(feeDetails.inclusionFee.lenFee) || BigInt(0);
+        const adjustedWeightFee = feeDetails.inclusionFee?.adjustedWeightFee && BigInt(feeDetails.inclusionFee.adjustedWeightFee) || BigInt(0);
+        const estimatedWeight: bigint = fee.weight && BigInt(fee.weight) || BigInt(0);
+        const estimatedPartialFee = fee.partialFee && BigInt(fee.partialFee) || BigInt(0);
+
+        fee.partialFee = estimatedPartialFee;
+        feeDetails.inclusionFee.baseFee = baseFee;
+        feeDetails.inclusionFee.lenFee = lenFee;
+        feeDetails.inclusionFee.adjustedWeightFee = adjustedWeightFee
+
+        if (systemEvents) {
+            const successEvent = (systemEvents as EventRecord[]).find((systemEvent) =>
+                systemEvent.phase.__kind === "ApplyExtrinsic" &&
+                systemEvent.phase.value === event.extrinsic!.index &&
+                systemEvent.event.value.__kind === "ExtrinsicSuccess"
+            );
+
+            if (successEvent) {
+                const dispatchInfo = (successEvent.event.value as SystemEvent_ExtrinsicSuccess).value;
+                if (dispatchInfo.paysFee.__kind === "Yes") {
+                    const actualWeight = dispatchInfo.weight || BigInt(0);
+                    fee.partialFee = baseFee + lenFee + ((adjustedWeightFee / estimatedWeight) * actualWeight);
+                }
+            }
+        }
+
+        return { fee, feeDetails };
+    }
+
+    private async getSystemEvents(blockHeader: BlockHeader<Fields>) {
+        const storageV5 = system.events.v5;
+        if (storageV5.is(blockHeader)) {
+            return await storageV5.get(blockHeader);
+        }
+
+        const storageV8 = system.events.v8;
+        if (storageV8.is(blockHeader)) {
+            return await storageV8.get(blockHeader);
+        }
+
+        const storageV10 = system.events.v10;
+        if (storageV10.is(blockHeader)) {
+            return await storageV10.get(blockHeader);
+        }
+
+        return undefined;
     }
 }
 
