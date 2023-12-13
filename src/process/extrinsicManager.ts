@@ -5,7 +5,6 @@ import { Fields, ctx } from "../processor";
 import { getFeeDetails, getPaymentInfo } from "../util/extrinsic";
 import { getDocs, getErrorMessage, hexToNativeAddress, toCamelCase } from "../util/util";
 import { DataString } from "../util/interfaces";
-import { system } from "../types/storage";
 import { EventRecord as EventRecordV5, SystemEvent_ExtrinsicSuccess as ExtrinsicSuccessV5 } from "../types/v5";
 import { EventRecord as EventRecordV8, SystemEvent_ExtrinsicSuccess as ExtrinsicSuccessV8 } from "../types/v8";
 import { EventRecord as EventRecordV10, SystemEvent_ExtrinsicSuccess as ExtrinsicSuccessV10 } from "../types/v10";

@@ -17,6 +17,24 @@ import { hexToNativeAddress, REEF_CONTRACT_ADDRESS } from "./util/util";
 import { Account, Block, Event, EvmEvent, Extrinsic, Staking, Transfer, VerifiedContract } from "./model";
 import { FirebaseDB } from "./firebase/firebase";
 
+// TODO: remove pusher
+import Pusher from "pusher";
+let pusher: Pusher;
+const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
+const PUSHER_EVENT = process.env.PUSHER_EVENT;
+if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
+  pusher = new Pusher({
+    appId: process.env.PUSHER_APP_ID!,
+    key: process.env.PUSHER_KEY!,
+    secret: process.env.PUSHER_SECRET!,
+    cluster: process.env.PUSHER_CLUSTER || "eu",
+    useTLS: true
+  });
+  console.log('Pusher enabled: true');
+} else {
+  console.log('Pusher enabled: false');
+}
+
 const network = process.env.NETWORK;
 if (!network) {
   throw new Error('Network not set in environment.')
@@ -88,6 +106,10 @@ processor.run(database, async (ctx_) => {
   // Push data from previous batch
   if (firebaseDB && newBlockData) {
     firebaseDB.notifyBlock(newBlockData);
+  }
+  // TODO: remove pusher
+  if (pusher && newBlockData) {
+    pushMessage(newBlockData);
   }
 
   // Initialize global variables in first batch
@@ -255,4 +277,22 @@ async function deleteInvalidBlocks(firstInvalidBlockHeight: number) {
   await ctx.store.remove(transfersToDelete);
   await ctx.store.remove(evmEventsToDelete);
   await ctx.store.remove(blocksToDelete);
+}
+
+// TODO: remove pusher
+async function pushMessage(data: NewBlockData) {
+  if (!data.updatedContracts.length 
+    && !data.updatedAccounts.REEF20Transfers.length 
+    && !data.updatedAccounts.REEF721Transfers.length 
+    && !data.updatedAccounts.REEF1155Transfers.length 
+    && !data.updatedAccounts.boundEvm.length
+  ) {
+    return;
+  }
+
+  try {
+    await pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
+  } catch (e) {
+    ctx.log.error(`Pusher error: ${e}`);
+  }
 }

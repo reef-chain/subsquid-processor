@@ -25,6 +25,18 @@ deploy:
         https://reef-block-index-default-rtdb.firebaseio.com/
       REEFSWAP_ROUTER_ADDRESS_TESTNET:
         "0xd855a7c33ebF6566e846B0D6F7Ba7f7e1fe99768"
+      PUSHER_ENABLED:
+        false
+      PUSHER_APP_ID:
+        1629403
+      PUSHER_KEY:
+        fc5ad78eb31981de6c67
+      PUSHER_CLUSTER:
+        eu
+      PUSHER_CHANNEL:
+        reef-chain
+      PUSHER_EVENT:
+        block-finalised-testnet
     cmd: [ "node", "lib/processor" ]
   api:
     env:
@@ -38,6 +50,18 @@ deploy:
         reef-block-index
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
+      PUSHER_ENABLED:
+        false
+      PUSHER_APP_ID:
+        1629403
+      PUSHER_KEY:
+        fc5ad78eb31981de6c67
+      PUSHER_CLUSTER:
+        eu
+      PUSHER_CHANNEL:
+        reef-chain
+      PUSHER_EVENT:
+        block-finalised-testnet
     cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
   secrets:
     - NODE_RPC_WS_MAINNET
@@ -50,6 +74,7 @@ deploy:
     - APIKEY_REEF_BRIDGE
     - FIREBASE_CLIENT_EMAIL
     - FIREBASE_PK
+    - PUSHER_SECRET
 
 scale:
   dedicated: true
