@@ -100,7 +100,7 @@ const getEvmAddresses = async(blockHeader: BlockHeader<Fields>, addresses: strin
 
 const getIdentities = async (blockHeader: BlockHeader<Fields>, addresses: string[]) => {
     const storageV5 = identity.identityOf.v5;
-        if (storageV5.is(blockHeader)) {
+    if (storageV5.is(blockHeader)) {
         const identityRaws = await storageV5.getMany(blockHeader, addresses);
         return identityRaws.map(identityRaw => extractIdentity(identityRaw));
     }

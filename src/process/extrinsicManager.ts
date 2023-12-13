@@ -120,22 +120,12 @@ export class ExtrinsicManager {
     }
 
     private async getSystemEvents(blockHeader: BlockHeader<Fields>) {
-        const storageV5 = system.events.v5;
-        if (storageV5.is(blockHeader)) {
-            return await storageV5.get(blockHeader);
+        try {
+            // For testnet System.Events is not found in metadata, so call getStorage directly
+            return await blockHeader._runtime.getStorage(blockHeader.hash, 'System.Events');
+        } catch (error) {
+            return undefined;
         }
-
-        const storageV8 = system.events.v8;
-        if (storageV8.is(blockHeader)) {
-            return await storageV8.get(blockHeader);
-        }
-
-        const storageV10 = system.events.v10;
-        if (storageV10.is(blockHeader)) {
-            return await storageV10.get(blockHeader);
-        }
-
-        return undefined;
     }
 }
 

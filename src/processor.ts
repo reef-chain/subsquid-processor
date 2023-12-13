@@ -136,7 +136,7 @@ processor.run(database, async (ctx_) => {
 
     if (!headReached && ctx.isHead) {
       headReached = true;
-      await updateFromHead(block.header)
+      await updateFromHead(block.header);
     }
 
     blockManager.process(block.header);
