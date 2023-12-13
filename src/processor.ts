@@ -149,6 +149,8 @@ processor.run(database, async (ctx_) => {
   const transferManager: TransferManager = new TransferManager(tokenHolderManager);
   const accountManager = new AccountManager(tokenHolderManager, transferManager);
 
+  if (ctx.blocks.length > 1) ctx.log.debug(`Batch size: ${ctx.blocks.length}`);
+
   // Process blocks
   for (const block of ctx.blocks) {
     if (block.header.height <= latestBlockHeight && firstInvalidBlockHeight !== 0) {
@@ -230,7 +232,7 @@ processor.run(database, async (ctx_) => {
   latestBlockHeight = ctx.blocks[ctx.blocks.length - 1].header.height;
 
   // Update list of updated accounts for notification
-  if (firebaseDB && headReached) {
+  if ((firebaseDB || pusher) && headReached) {
     const lastBlockHeader = ctx.blocks[ctx.blocks.length - 1].header;
     
     const updatedErc20Accounts = Array.from(tokenHolderManager.tokenHoldersData.values())

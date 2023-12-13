@@ -107,7 +107,7 @@ export class TokenHolderResolver {
 
     await manager.save(entities);
 
-    if (firebaseDB) {
+    if (firebaseDB || pusher) {
       const updatedErc20Accounts = entities
         .filter(t => t.token.type === 'ERC20' && t.signer?.id !== '')
         .map(t => t.signer!.id as string)
@@ -141,7 +141,7 @@ export class TokenHolderResolver {
         updatedContracts: [],
       };
 
-      firebaseDB.notifyBlock(data);
+      if (firebaseDB) firebaseDB.notifyBlock(data);
 
       // TODO: remove pusher
       if (pusher) pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
