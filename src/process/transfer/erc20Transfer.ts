@@ -3,7 +3,7 @@ import { Event } from "@subsquid/substrate-processor";
 import { ERC20Data, TransferData } from "../../interfaces/interfaces";
 import { TransferType, VerifiedContract } from "../../model";
 import * as erc20 from "../../abi/ERC20";
-import { findNativeAddress, REEF_CONTRACT_ADDRESS, toChainContext, toChecksumAddress } from "../../util/util";
+import { findNativeAddress, toChainContext, toChecksumAddress } from "../../util/util";
 import { AccountManager } from "../accountManager";
 import { TokenHolderManager } from "../tokenHolderManager";
 import { ctx, Fields, headReached } from "../../processor";
@@ -17,7 +17,6 @@ export const processErc20Transfer = async (
     tokenHolderManager: TokenHolderManager
 ): Promise<TransferData | undefined> => {
     const tokenAddress = token.id;
-    if (tokenAddress === REEF_CONTRACT_ADDRESS) return;
     const [from, to, value] = erc20.events.Transfer.decode(event.args.log || event.args);
     
     const toAddress = await findNativeAddress(event.block, to);

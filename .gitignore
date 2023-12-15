@@ -9,3 +9,4 @@
 /builds
 /*.code-workspace
 .env
+notes.md
