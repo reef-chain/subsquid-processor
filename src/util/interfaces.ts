@@ -16,7 +16,7 @@ interface FunctionArgumentMetadataV9 {
   type: string
 }
 
-export interface DataString {
+export interface DataRawAddress {
   __kind: string,
   value: string
 }

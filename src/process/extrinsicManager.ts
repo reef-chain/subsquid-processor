@@ -4,7 +4,7 @@ import { Block, Extrinsic, ExtrinsicStatus, ExtrinsicType } from "../model";
 import { Fields, ctx } from "../processor";
 import { getFeeDetails, getPaymentInfo } from "../util/extrinsic";
 import { getDocs, getErrorMessage, hexToNativeAddress, toCamelCase } from "../util/util";
-import { DataString } from "../util/interfaces";
+import { DataRawAddress } from "../util/interfaces";
 import { EventRecord as EventRecordV5, SystemEvent_ExtrinsicSuccess as ExtrinsicSuccessV5 } from "../types/v5";
 import { EventRecord as EventRecordV8, SystemEvent_ExtrinsicSuccess as ExtrinsicSuccessV8 } from "../types/v8";
 import { EventRecord as EventRecordV10, SystemEvent_ExtrinsicSuccess as ExtrinsicSuccessV10 } from "../types/v10";
@@ -21,8 +21,8 @@ export class ExtrinsicManager {
         let signer = "";
         let signedData = null;
         if (event.extrinsic?.signature?.address) {
-            const address = (event.extrinsic!.signature!.address as DataString).value;
-            signer = hexToNativeAddress(address);
+            const addressHex = (event.extrinsic!.signature!.address as DataRawAddress).value;
+            signer = hexToNativeAddress(addressHex);
             signedData = await this.getSignedData(event);
         }
             
