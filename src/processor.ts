@@ -42,10 +42,17 @@ if (!network) {
 
 const RPC_URL = process.env[`NODE_RPC_WS_${network.toUpperCase()}`];
 const AQUARIUM_ARCHIVE_NAME = process.env[`ARCHIVE_LOOKUP_NAME_${network.toUpperCase()}`] as KnownArchives;
-console.log('\nNETWORK=',network, ' RPC=', RPC_URL, ' AQUARIUM_ARCHIVE_NAME=', AQUARIUM_ARCHIVE_NAME);
-const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME, { release: 'ArrowSquid' });
+const USE_ONLY_RPC = process.env.USE_ONLY_RPC === 'true';
+const ARCHIVE = USE_ONLY_RPC ? undefined : lookupArchive(AQUARIUM_ARCHIVE_NAME, { release: 'ArrowSquid' });
 const START_BLOCK = parseInt(process.env.START_BLOCK || '0');
 export const REEFSWAP_ROUTER_ADDRESS = process.env[`REEFSWAP_ROUTER_ADDRESS_${network.toUpperCase()}`];
+console.log(`
+    Network: ${network}
+    RPC URL: ${RPC_URL}
+    Reefswap Router: ${REEFSWAP_ROUTER_ADDRESS}
+    Archive: ${USE_ONLY_RPC ? 'None' : ARCHIVE}
+    Start block: ${START_BLOCK}
+`);
 
 const database = new TypeormDatabase();
 const fields = {

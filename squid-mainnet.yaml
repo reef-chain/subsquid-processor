@@ -19,6 +19,8 @@ deploy:
         false
       NOTIFY_NEW_BLOCKS:
         true
+      USE_ONLY_RPC:
+        false
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:
