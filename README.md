@@ -26,28 +26,6 @@ make serve
 make down
 ```
 
-## Self-hosted archive
-
-```bash
-make archive-up
-```
-
-To drop the archive, run
-
-```bash
-make archive-down
-```
-
-The archive gateway will be started at port `8888`, and it can immediately be used with the processor (even if it's not in sync):
-
-```typescript
-processor.setDataSource({
-  archive: `http://localhost:8888/graphql`,
-});
-```
-
-Additionally, an explorer GraphQL API and a playground will be started at `http://localhost:4350/graphql`. While optional, it's a useful tool for debugging and on-chain data exploration.
-
 ## Dev flow
 
 ### 1. Define database schema
