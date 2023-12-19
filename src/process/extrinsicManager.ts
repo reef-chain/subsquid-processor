@@ -99,7 +99,7 @@ export class ExtrinsicManager {
         feeDetails.inclusionFee.lenFee = lenFee;
         feeDetails.inclusionFee.adjustedWeightFee = adjustedWeightFee
 
-        if (systemEvents) {
+        if (systemEvents && estimatedWeight > BigInt(0)) {
             const successEvent = (systemEvents as EventRecord[]).find((systemEvent) =>
                 systemEvent.phase.__kind === "ApplyExtrinsic" &&
                 systemEvent.phase.value === event.extrinsic!.index &&
@@ -108,8 +108,8 @@ export class ExtrinsicManager {
 
             if (successEvent) {
                 const dispatchInfo = (successEvent.event.value as SystemEvent_ExtrinsicSuccess).value;
-                if (dispatchInfo.paysFee.__kind === "Yes") {
-                    const actualWeight = dispatchInfo.weight || BigInt(0);
+                if (dispatchInfo.paysFee.__kind === "Yes" && dispatchInfo.weight) {
+                    const actualWeight = dispatchInfo.weight;
                     fee.partialFee = baseFee + lenFee + ((adjustedWeightFee / estimatedWeight) * actualWeight);
                 }
             }
