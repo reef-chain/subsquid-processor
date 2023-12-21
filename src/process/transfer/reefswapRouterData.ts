@@ -5,7 +5,8 @@ import { Fields, REEFSWAP_ROUTER_ADDRESS } from "../../processor";
 import { functions as funcsReefswapV2Router, abi as ifaceReefswapV2Router } from "../../abi/ReefswapV2Router02";
 
 export const extractReefswapRouterData = (event: Event<Fields>, tokenAddress: string): ReefswapAction | null => {
-    if (event.extrinsic!.call!.args.target.toLowerCase() !== REEFSWAP_ROUTER_ADDRESS?.toLowerCase()) return null;
+    if (!event.extrinsic?.call?.args?.target || !REEFSWAP_ROUTER_ADDRESS) return null;
+    if (event.extrinsic!.call!.args.target.toLowerCase() !== REEFSWAP_ROUTER_ADDRESS.toLowerCase()) return null;
 
     const sighash = event.extrinsic!.call!.args.input.substr(0, 10);
     let decoded;
