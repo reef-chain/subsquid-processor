@@ -78,8 +78,8 @@ deploy:
     - FIREBASE_PK
     - PUSHER_SECRET
 
-# scale:
-#   dedicated: true
-#   addons:
-#     postgres:
-#       storage: 100Gi
+scale:
+  dedicated: true
+  addons:
+    postgres:
+      storage: 100Gi

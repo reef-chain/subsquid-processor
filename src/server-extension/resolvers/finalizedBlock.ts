@@ -19,11 +19,17 @@ export class FinalizedBlockResolver {
       return false;
     }
 
+    const firstUnfinalizedBlock = await manager.findOneBy(Block, { finalized: false });
+    if (!firstUnfinalizedBlock || firstUnfinalizedBlock.height > height) return true;
+
+    const maxUpdateSize = 10_000;
+    height = height - firstUnfinalizedBlock.height >= maxUpdateSize ? firstUnfinalizedBlock.height + maxUpdateSize - 1 : height;
     await manager.update(
-      Block, 
-      { height: LessThanOrEqual(height), finalized: false }, 
+      Block,
+      { height: LessThanOrEqual(height), finalized: false },
       { finalized: true }
     );
+
     return true;
   }
 }
