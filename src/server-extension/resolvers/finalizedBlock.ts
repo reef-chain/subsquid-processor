@@ -11,6 +11,7 @@ export class FinalizedBlockResolver {
     @Arg('height') height: number,
     @Arg('hash') hash: string
   ): Promise<Boolean> {
+    console.debug(`newFinalizedBlock: ${height} ${hash}`);
     const manager = await this.tx();
 
     const block = await manager.findOneBy(Block, { height: height });
@@ -22,7 +23,7 @@ export class FinalizedBlockResolver {
     const firstUnfinalizedBlock = await manager.findOneBy(Block, { finalized: false });
     if (!firstUnfinalizedBlock || firstUnfinalizedBlock.height > height) return true;
 
-    const maxUpdateSize = 10_000;
+    const maxUpdateSize = 100_000;
     height = height - firstUnfinalizedBlock.height >= maxUpdateSize ? firstUnfinalizedBlock.height + maxUpdateSize - 1 : height;
     await manager.update(
       Block,
