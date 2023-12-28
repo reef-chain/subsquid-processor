@@ -22,11 +22,11 @@ type Block @entity @index(fields: ["height", "id"], unique: true) {
 }
 
 type Extrinsic @entity @index(fields: ["timestamp", "id"], unique: true) @index(fields: ["index", "block"], unique: true) {
-  "000000..00<blockNum>-000<index>-<shorthash>"
+  "000000..00<blockNum>-<shorthash>-000<index>"
   id: ID!
   block: Block!
   index: Int! @index
-  hash: String! @index
+  hash: String! @index @unique
   args: JSON!
   docs: String!
   method: String! @index
@@ -43,7 +43,7 @@ type Extrinsic @entity @index(fields: ["timestamp", "id"], unique: true) @index(
 }
 
 type Event @entity @index(fields: ["id", "block"], unique: true) @index(fields: ["extrinsic", "index"], unique: true) @index(fields: ["block", "index", "extrinsic"], unique: true) {
-  "000000..00<blockNum>-000<index>-<shorthash>"
+  "000000..00<blockNum>-<shorthash>-000<index>"
   id: ID!
   extrinsic: Extrinsic!
   block: Block!
@@ -88,7 +88,7 @@ type Contract @entity @index(fields: ["extrinsic", "id"], unique: true) {
 }
 
 type EvmEvent @entity {
-  "000000..00<blockNum>-000<index>-<shorthash>"
+  "000000..00<blockNum>-<shorthash>-000<index>"
   id: ID!
   event: Event!
   block: Block!
@@ -193,15 +193,6 @@ type Staking @entity {
   type: StakingType! @index
   amount: BigInt! 
   timestamp: DateTime!
-}
-
-# ===================== Pusher ============================
-
-# TODO: remove pusher
-type PusherMessage @entity {
-  "Block ID"
-  id: ID!
-  data: String!
 }
 
 # ===================== Enums =============================

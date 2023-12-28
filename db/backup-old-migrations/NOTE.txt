@@ -1,4 +1,0 @@
-This folder contains the migration files that have been generated after each change in the database schema.
-However when running them in a fresh database, an error occurs because indexes are created and removed in the same transaction.
-To solve this, a new migration file has been created and its content added to the last migration file. The previous migration files are empty.
-This files are kept for reference.

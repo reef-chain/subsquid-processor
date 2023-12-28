@@ -1,55 +1,57 @@
-import { SubstrateBlock } from "@subsquid/substrate-processor";
-import { ExtrinsicData, ExtrinsicRaw } from "../interfaces/interfaces";
+import { BlockHeader, Event } from "@subsquid/substrate-processor";
+import { ExtrinsicData } from "../interfaces/interfaces";
 import { Block, Extrinsic, ExtrinsicStatus, ExtrinsicType } from "../model";
-import { ctx } from "../processor";
+import { Fields, ctx } from "../processor";
 import { getFeeDetails, getPaymentInfo } from "../util/extrinsic";
-import { getErrorMessage, hexToNativeAddress, toCamelCase } from "../util/util";
-import * as eac from '@subsquid/substrate-metadata/lib/events-and-calls'
+import { getDocs, getErrorMessage, hexToNativeAddress, toCamelCase } from "../util/util";
+import { DataRawAddress } from "../util/interfaces";
+import { EventRecord as EventRecordV5, SystemEvent_ExtrinsicSuccess as ExtrinsicSuccessV5 } from "../types/v5";
+import { EventRecord as EventRecordV8, SystemEvent_ExtrinsicSuccess as ExtrinsicSuccessV8 } from "../types/v8";
+import { EventRecord as EventRecordV10, SystemEvent_ExtrinsicSuccess as ExtrinsicSuccessV10 } from "../types/v10";
+
+type EventRecord = EventRecordV5 | EventRecordV8 | EventRecordV10;
+type SystemEvent_ExtrinsicSuccess = ExtrinsicSuccessV5 | ExtrinsicSuccessV8 | ExtrinsicSuccessV10;
 
 export class ExtrinsicManager {  
     extrinsicsData: Map<string, ExtrinsicData> = new Map();
   
-    async process(extrinsicRaw: ExtrinsicRaw, blockHeader: SubstrateBlock): Promise<bigint> {
-        if (this.extrinsicsData.has(extrinsicRaw.id)) return BigInt(0);
+    async process(event: Event<Fields>): Promise<bigint> {
+        if (this.extrinsicsData.has(event.extrinsic!.id)) return BigInt(0);
 
         let signer = "";
         let signedData = null;
-        if (extrinsicRaw.signature?.address?.value) {
-            signer = hexToNativeAddress(extrinsicRaw.signature.address.value);
-            const [fee, feeDetails] = await Promise.all([
-                getPaymentInfo(extrinsicRaw, blockHeader.parentHash),
-                getFeeDetails(extrinsicRaw, blockHeader.parentHash)
-            ]);
-            fee.partialFee = fee.partialFee && BigInt(fee.partialFee) || BigInt(0);
-            feeDetails.inclusionFee.baseFee = feeDetails.inclusionFee?.baseFee && BigInt(feeDetails.inclusionFee.baseFee) || BigInt(0);
-            feeDetails.inclusionFee.lenFee = feeDetails.inclusionFee?.lenFee && BigInt(feeDetails.inclusionFee.lenFee) || BigInt(0);
-            feeDetails.inclusionFee.adjustedWeightFee = feeDetails.inclusionFee?.adjustedWeightFee && BigInt(feeDetails.inclusionFee.adjustedWeightFee) || BigInt(0);
-            signedData = { fee, feeDetails };
+        if (event.extrinsic?.signature?.address) {
+            const addressHex = (event.extrinsic!.signature!.address as DataRawAddress).value;
+            signer = hexToNativeAddress(addressHex);
+            signedData = await this.getSignedData(event);
         }
             
-        const section = extrinsicRaw.call.name.split(".")[0];
+        const [section, method] = event.extrinsic!.call!.name.split(".");
+
         let errorMessage = "";
-        if (extrinsicRaw.error) {
-            errorMessage = getErrorMessage(extrinsicRaw.error, section);
+        if (event.extrinsic?.error) {
+            errorMessage = getErrorMessage(event.block._runtime, event.extrinsic!.error, section);
         }
 
-        const calls = new eac.Registry(ctx._chain.description.types, ctx._chain.description.call);
+        const docs = getDocs(event.block._runtime, section, method);
+
+        event.block._runtime
 
         const extrinsicData = {
-            id: extrinsicRaw.id,
-            blockId: blockHeader.id,
-            index: extrinsicRaw.indexInBlock,
-            hash: extrinsicRaw.hash,
-            args: extrinsicRaw.call.args ? Object.keys(extrinsicRaw.call.args).map(key => extrinsicRaw.call.args[key]) : [],
-            docs: calls.definitions[extrinsicRaw.call.name].docs?.toString() || "",
-            method: toCamelCase(extrinsicRaw.call.name.split(".")[1]),
+            id: event.extrinsic!.id,
+            blockId: event.block.id,
+            index: event.extrinsic!.index,
+            hash: `${event.extrinsic!.hash}-${event.block.hash.substring(2, 7)}`,
+            args: event.extrinsic!.call!.args ? Object.keys(event.extrinsic!.call!.args).map(key => event.extrinsic!.call!.args[key]) : [],
+            docs: docs,
+            method: toCamelCase(method),
             section: section,
             signer: signer,
-            status: extrinsicRaw.success ? ExtrinsicStatus.success : ExtrinsicStatus.error,
+            status: event.extrinsic!.success ? ExtrinsicStatus.success : ExtrinsicStatus.error,
             errorMessage: errorMessage,
             type: signer ? ExtrinsicType.signed : ExtrinsicType.unsigned,
             signedData: signedData,
-            timestamp: new Date(blockHeader.timestamp),
+            timestamp: new Date(event.block.timestamp!),
         };
 
         this.extrinsicsData.set(extrinsicData.id, extrinsicData);
@@ -76,6 +78,53 @@ export class ExtrinsicManager {
         await ctx.store.insert([...extrinsics.values()]);
     
         return extrinsics;
+    }
+
+    // https://substrate.stackexchange.com/questions/2637/determining-the-final-fee-from-a-client/4224#4224
+    private async getSignedData(event: Event<Fields>) {
+        const [fee, feeDetails, systemEvents] = await Promise.all([
+            getPaymentInfo(event, event.block.parentHash),
+            getFeeDetails(event, event.block.parentHash),
+            this.getSystemEvents(event.block)
+        ]);
+
+        const baseFee = feeDetails.inclusionFee?.baseFee && BigInt(feeDetails.inclusionFee.baseFee) || BigInt(0);
+        const lenFee = feeDetails.inclusionFee?.lenFee && BigInt(feeDetails.inclusionFee.lenFee) || BigInt(0);
+        const adjustedWeightFee = feeDetails.inclusionFee?.adjustedWeightFee && BigInt(feeDetails.inclusionFee.adjustedWeightFee) || BigInt(0);
+        const estimatedWeight: bigint = fee.weight && BigInt(fee.weight) || BigInt(0);
+        const estimatedPartialFee = fee.partialFee && BigInt(fee.partialFee) || BigInt(0);
+
+        fee.partialFee = estimatedPartialFee;
+        feeDetails.inclusionFee.baseFee = baseFee;
+        feeDetails.inclusionFee.lenFee = lenFee;
+        feeDetails.inclusionFee.adjustedWeightFee = adjustedWeightFee
+
+        if (systemEvents && estimatedWeight > BigInt(0)) {
+            const successEvent = (systemEvents as EventRecord[]).find((systemEvent) =>
+                systemEvent.phase.__kind === "ApplyExtrinsic" &&
+                systemEvent.phase.value === event.extrinsic!.index &&
+                systemEvent.event.value.__kind === "ExtrinsicSuccess"
+            );
+
+            if (successEvent) {
+                const dispatchInfo = (successEvent.event.value as SystemEvent_ExtrinsicSuccess).value;
+                if (dispatchInfo.paysFee.__kind === "Yes" && dispatchInfo.weight) {
+                    const actualWeight = dispatchInfo.weight;
+                    fee.partialFee = baseFee + lenFee + ((adjustedWeightFee / estimatedWeight) * actualWeight);
+                }
+            }
+        }
+
+        return { fee, feeDetails };
+    }
+
+    private async getSystemEvents(blockHeader: BlockHeader<Fields>) {
+        try {
+            // For testnet System.Events is not found in metadata, so call getStorage directly
+            return await blockHeader._runtime.getStorage(blockHeader.hash, 'System.Events');
+        } catch (error) {
+            return undefined;
+        }
     }
 }
 

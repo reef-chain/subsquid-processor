@@ -1,32 +1,31 @@
-import { SubstrateBlock } from "@subsquid/substrate-processor";
-import { ctx } from "../../processor";
-import { BalancesLocksStorage, SystemAccountStorage } from "../../types/storage";
+import { BlockHeader } from "@subsquid/substrate-processor";
+import { Fields } from "../../processor";
+import { balances, system } from "../../types/storage";
 import { AccountBalances, AccountBalancesBase, AccountBalancesLocked } from "./types";
 import { AccountInfo, BalanceLock } from "../../types/v5";
-import { bufferToString } from "../util";
 
 const VESTING_ID = '0x76657374696e6720';
 
-const getAccountBalancesBase = async (address: Uint8Array, blockHeader: SubstrateBlock): Promise<AccountBalancesBase> => {
-    const storage = new SystemAccountStorage(ctx, blockHeader);
-
-    if (storage.isV5) {
-        const accountInfo: AccountInfo = await storage.asV5.get(address);
+const getAccountBalancesBase = async (address: string, blockHeader: BlockHeader<Fields>): Promise<AccountBalancesBase> => {
+    const storageV5 = system.account.v5;
+    if (storageV5.is(blockHeader)) {
+        const accountInfo: AccountInfo | undefined = await storageV5.get(blockHeader, address);
         return {
-            freeBalance: BigInt(accountInfo.data.free),
-            reservedBalance: BigInt(accountInfo.data.reserved),
-            votingBalance: BigInt(accountInfo.data.free),
-            accountNonce: accountInfo.nonce
+            freeBalance: accountInfo ? BigInt(accountInfo.data.free) : BigInt(0),
+            reservedBalance: accountInfo ? BigInt(accountInfo.data.reserved) : BigInt(0),
+            votingBalance: accountInfo ? BigInt(accountInfo.data.free) : BigInt(0),
+            accountNonce: accountInfo ? accountInfo.nonce : 0
         }
     }
 
-    if (storage.isV10) {
-        const accountInfo: AccountInfo = await storage.asV10.get(address);
+    const storageV8 = system.account.v8;
+    if (storageV8.is(blockHeader)) {
+        const accountInfo: AccountInfo | undefined = await storageV8.get(blockHeader, address);
         return {
-            freeBalance: BigInt(accountInfo.data.free),
-            reservedBalance: BigInt(accountInfo.data.reserved),
-            votingBalance: BigInt(accountInfo.data.free),
-            accountNonce: accountInfo.nonce
+            freeBalance: accountInfo ? BigInt(accountInfo.data.free) : BigInt(0),
+            reservedBalance: accountInfo ? BigInt(accountInfo.data.reserved) : BigInt(0),
+            votingBalance: accountInfo ? BigInt(accountInfo.data.free) : BigInt(0),
+            accountNonce: accountInfo ? accountInfo.nonce : 0
         }
     }
 
@@ -38,20 +37,23 @@ const getAccountBalancesBase = async (address: Uint8Array, blockHeader: Substrat
     };
 }
 
-const getLockedData = async (address: Uint8Array, blockHeader: SubstrateBlock): Promise<AccountBalancesLocked> => {
+const getLockedData = async (address: string, blockHeader: BlockHeader<Fields>): Promise<AccountBalancesLocked> => {
     let lockedBalance = BigInt(0);
     let vestingLocked = BigInt(0);
 
-    const storage = new BalancesLocksStorage(ctx, blockHeader);
-    if (!storage.isExists || !storage.isV5) {
+    const storageV5 = balances.locks.v5;
+    if (!storageV5.is(blockHeader)) {
         return { lockedBalance, vestingLocked };
     }
 
-    const locks: BalanceLock[] = await storage.asV5.get(address);
+    const locks: BalanceLock[] | undefined = await storageV5.get(blockHeader, address);
+    if (!locks) {
+        return { lockedBalance, vestingLocked };
+    }
 
-    vestingLocked = locks.filter(({ id }) => bufferToString(id as Buffer) === VESTING_ID)
+    vestingLocked = locks.filter(({ id }) => id === VESTING_ID)
         .reduce((result: bigint, { amount }) => result += amount, BigInt(0));
-    const vestingLocks: BalanceLock[] = locks.filter(({ id }) => bufferToString(id as Buffer) === VESTING_ID);
+    const vestingLocks: BalanceLock[] = locks.filter(({ id }) => id === VESTING_ID);
     vestingLocks.reduce((result: bigint, { amount }) => result += amount, BigInt(0));
 
     // get the maximum of the locks according to https://github.com/paritytech/substrate/blob/master/srml/balances/src/lib.rs#L699
@@ -64,7 +66,7 @@ const getLockedData = async (address: Uint8Array, blockHeader: SubstrateBlock): 
     return { lockedBalance, vestingLocked };
 }
 
-export const getBalancesAccount = async (blockHeader: SubstrateBlock, address: Uint8Array): Promise<AccountBalances> => {
+export const getBalancesAccount = async (blockHeader: BlockHeader<Fields>, address: string): Promise<AccountBalances> => {
     const [accountBalancesBase, accountBalancesLocked] = await Promise.all([
         getAccountBalancesBase(address, blockHeader),
         getLockedData(address, blockHeader)

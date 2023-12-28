@@ -1,10 +1,8 @@
 import { Store, TypeormDatabase } from "@subsquid/typeorm-store";
-import {
-  BatchContext,
-  BatchProcessorItem,
-  SubstrateBatchProcessor,
-} from "@subsquid/substrate-processor";
-import { EventRaw, NewBlockData } from "./interfaces/interfaces";
+import { DataHandlerContext, SubstrateBatchProcessor } from "@subsquid/substrate-processor";
+import { KnownArchives, lookupArchive } from "@subsquid/archive-registry";
+import { MoreThanOrEqual, In } from "typeorm";
+import { NewBlockData } from "./interfaces/interfaces";
 import { AccountManager } from "./process/accountManager";
 import { BlockManager } from "./process/blockManager";
 import { ExtrinsicManager } from "./process/extrinsicManager";
@@ -14,38 +12,16 @@ import { EvmEventManager } from "./process/evmEventManager";
 import { TransferManager } from "./process/transferManager";
 import { TokenHolderManager } from "./process/tokenHolderManager";
 import { StakingManager } from "./process/stakingManager";
-import { fetchModules, hexToNativeAddress, MetadataModule, REEF_CONTRACT_ADDRESS } from "./util/util";
-import { KnownArchives, lookupArchive } from "@subsquid/archive-registry";
-import { Account, Extrinsic, PusherMessage, VerifiedContract } from "./model";
 import { updateFromHead } from "./process/updateFromHead";
+import { hexToNativeAddress, REEF_CONTRACT_ADDRESS } from "./util/util";
+import { Account, Block, Event, EvmEvent, Extrinsic, Staking, Transfer, VerifiedContract } from "./model";
 import { FirebaseDB } from "./firebase/firebase";
 
 // TODO: remove pusher
 import Pusher from "pusher";
+let pusher: Pusher;
 const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
 const PUSHER_EVENT = process.env.PUSHER_EVENT;
-
-const network = process.env.NETWORK;
-if (!network) {
-  throw new Error('Network not set in environment.')
-}
-
-const RPC_URL = process.env[`NODE_RPC_WS_${network.toUpperCase()}`];
-const AQUARIUM_ARCHIVE_NAME = process.env[`ARCHIVE_LOOKUP_NAME_${network.toUpperCase()}`] as KnownArchives;
-console.log('\nNETWORK=',network, ' RPC=', RPC_URL, ' AQUARIUM_ARCHIVE_NAME=', AQUARIUM_ARCHIVE_NAME);
-const ARCHIVE = lookupArchive(AQUARIUM_ARCHIVE_NAME);
-const START_BLOCK = parseInt(process.env.START_BLOCK || '0');
-export const REEFSWAP_ROUTER_ADDRESS = process.env[`REEFSWAP_ROUTER_ADDRESS_${network.toUpperCase()}`];
-
-const database = new TypeormDatabase();
-const processor = new SubstrateBatchProcessor()
-  .setBlockRange({ from: START_BLOCK })
-  .setDataSource({ chain: RPC_URL, archive: ARCHIVE })
-  .addEvent("*")
-  .includeAllBlocks(); // Force the processor to fetch the header data for all the blocks (by default, the processor fetches the block data only for all blocks that contain log items it was subscribed to)
-
-// TODO: remove pusher
-let pusher: Pusher;
 if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
   pusher = new Pusher({
     appId: process.env.PUSHER_APP_ID!,
@@ -59,13 +35,62 @@ if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
   console.log('Pusher enabled: false');
 }
 
-export type Item = BatchProcessorItem<typeof processor>;
-export type Context = BatchContext<Store, Item>;
+const network = process.env.NETWORK;
+if (!network) {
+  throw new Error('Network not set in environment.')
+}
+
+const RPC_URL = process.env[`NODE_RPC_WS_${network.toUpperCase()}`];
+const AQUARIUM_ARCHIVE_NAME = process.env[`ARCHIVE_LOOKUP_NAME_${network.toUpperCase()}`] as KnownArchives;
+const USE_ONLY_RPC = process.env.USE_ONLY_RPC === 'true';
+const ARCHIVE = USE_ONLY_RPC ? undefined : lookupArchive(AQUARIUM_ARCHIVE_NAME, { release: 'ArrowSquid' });
+const START_BLOCK = parseInt(process.env.START_BLOCK || '0');
+export const REEFSWAP_ROUTER_ADDRESS = process.env[`REEFSWAP_ROUTER_ADDRESS_${network.toUpperCase()}`];
+console.log(`
+    Network: ${network}
+    RPC URL: ${RPC_URL}
+    Reefswap Router: ${REEFSWAP_ROUTER_ADDRESS}
+    Archive: ${USE_ONLY_RPC ? 'None' : ARCHIVE}
+    Start block: ${START_BLOCK}
+`);
+
+const database = new TypeormDatabase();
+const fields = {
+  event: {
+    phase: true,
+  },
+  extrinsic: {
+    signature: true,
+    success: true,
+    error: true,
+    hash: true,
+    version: true,
+  },
+  call: {
+    name: true,
+    args: true,
+  },
+  block: {
+    timestamp: true,
+    stateRoot: true,
+    extrinsicsRoot: true,
+    validator: true,
+  }
+};
+export type Fields = typeof fields;
+
+const processor = new SubstrateBatchProcessor()
+  .setBlockRange({ from: START_BLOCK })
+  .setDataSource({ chain: { url: RPC_URL!, rateLimit: 10 }, archive: ARCHIVE })
+  .addEvent({ call: true, extrinsic: true })
+  .addCall({})
+  .includeAllBlocks()
+  .setFields(fields);
+
 export let reefVerifiedContract: VerifiedContract;
 export let emptyAccount: Account;
 export let emptyExtrinsic: Extrinsic;
-export let ctx: Context;
-export let modules: MetadataModule[];
+export let ctx: DataHandlerContext<Store, Fields>;
 export let headReached = process.env.HEAD_REACHED === 'true'; // default to false
 export const pinToIPFSEnabled = process.env.PIN_TO_IPFS !== 'false'; // default to true
 console.log(`Head reached: ${headReached}`);
@@ -76,6 +101,8 @@ console.log(`Pin to IPFS: ${pinToIPFSEnabled}`);
 
 let isFirstBatch = true;
 let newBlockData: NewBlockData;
+let latestBlockHeight = 0;
+let firstInvalidBlockHeight = 0;
 
 const firebaseDB = process.env.NOTIFY_NEW_BLOCKS === 'true' ? new FirebaseDB() : null;
 console.log(`Notify new blocks: ${!!firebaseDB}`);
@@ -115,13 +142,6 @@ processor.run(database, async (ctx_) => {
       throw new Error('Empty extrinsic not found in the database');
     }
 
-    const modules_ = await fetchModules(ctx.blocks[0].header);
-    if (modules_.length) {
-      modules = modules_;
-    } else {
-      throw new Error('Metadata modules not found');
-    }
-
     isFirstBatch = false;
   }
 
@@ -136,63 +156,73 @@ processor.run(database, async (ctx_) => {
   const transferManager: TransferManager = new TransferManager(tokenHolderManager);
   const accountManager = new AccountManager(tokenHolderManager, transferManager);
 
+  if (ctx.blocks.length > 1) ctx.log.debug(`Batch size: ${ctx.blocks.length}`);
+
   // Process blocks
   for (const block of ctx.blocks) {
+    if (block.header.height <= latestBlockHeight && firstInvalidBlockHeight !== 0) {
+      // A previously unfinalized block was not valid. This block and all subsequent blocks have to be deleted from the database.
+      firstInvalidBlockHeight = block.header.height;
+    }
+
     if (!headReached && ctx.isHead) {
       headReached = true;
-      await updateFromHead(block.header)
+      await updateFromHead(block.header);
     }
 
     blockManager.process(block.header);
 
     ctx.log.debug(`Processing block ${block.header.height}`);
 
-    for (const item of block.items as any) {
-      if (item.kind === "event" && item.event.phase === "ApplyExtrinsic") {
-        const eventRaw = item.event as EventRaw;
+    for (const event of block.events) {
+      if (event.phase === "ApplyExtrinsic") {
+        const feeAmount = await extrinsicManager.process(event);
+        eventManager.process(event);
 
-        const feeAmount = await extrinsicManager.process(eventRaw.extrinsic, block.header);
-        eventManager.process(eventRaw, block.header);
-
-        switch (item.name as string) {
+        switch (event.name) {
           case 'EVM.Log':
-            await evmEventManager.process(eventRaw, block.header, feeAmount, transferManager, accountManager, ctx.store);
+            await evmEventManager.process(event, feeAmount, transferManager, accountManager, ctx.store);
             break;
           case 'EVM.Created':
-            await contractManager.process(eventRaw, block.header);
+            await contractManager.process(event);
             break;
           case 'EVM.ExecutedFailed':
-            await evmEventManager.process(eventRaw, block.header, feeAmount, transferManager, accountManager);
+            await evmEventManager.process(event, feeAmount, transferManager, accountManager);
             break;
 
           case 'EvmAccounts.ClaimAccount':
-            const addressClaimer = hexToNativeAddress(eventRaw.args[0]);
+            const addressClaimer = hexToNativeAddress(event.args[0]);
             await accountManager.process(addressClaimer, block.header, true, true);
             break;
 
           case 'Balances.Endowed':
-            const addressEndowed = hexToNativeAddress(eventRaw.args[0]);
+            const addressEndowed = hexToNativeAddress(event.args[0]);
             await accountManager.process(addressEndowed, block.header);
             break;
           case 'Balances.Reserved':
-            const addressReserved = hexToNativeAddress(eventRaw.args[0]);
+            const addressReserved = hexToNativeAddress(event.args[0]);
             await accountManager.process(addressReserved, block.header);
             break;
           case 'Balances.Transfer':
-            await transferManager.process(eventRaw, block.header, accountManager, reefVerifiedContract, feeAmount, true);
+            await transferManager.process(event, accountManager, reefVerifiedContract, feeAmount, true);
             break;
 
           case 'Staking.Rewarded':
-            await stakingManager.process(eventRaw, block.header, accountManager);
+            await stakingManager.process(event, accountManager);
             break;
 
           case 'System.KilledAccount':
-            const address = hexToNativeAddress(eventRaw.args);
+            const address = hexToNativeAddress(event.args);
             await accountManager.process(address, block.header, false);
             break;
         }
       }
     }
+  }
+
+  if (firstInvalidBlockHeight !== 0) {
+    await deleteInvalidBlocks(firstInvalidBlockHeight);
+    firstInvalidBlockHeight = 0;
   }
 
   // Save data to database
@@ -206,9 +236,10 @@ processor.run(database, async (ctx_) => {
   await transferManager.save(blocks, extrinsics, accounts, events);
   await tokenHolderManager.save(accounts);
   await stakingManager.save(accounts, events);
+  latestBlockHeight = ctx.blocks[ctx.blocks.length - 1].header.height;
 
   // Update list of updated accounts for notification
-  if (firebaseDB && headReached) {
+  if ((firebaseDB || pusher) && headReached) {
     const lastBlockHeader = ctx.blocks[ctx.blocks.length - 1].header;
     
     const updatedErc20Accounts = Array.from(tokenHolderManager.tokenHoldersData.values())
@@ -238,34 +269,39 @@ processor.run(database, async (ctx_) => {
     };
   }
   
-  // TODO: remove pusher
-  async function pushMessage(data: NewBlockData) {
-    if (!data.updatedContracts.length 
-      && !data.updatedAccounts.REEF20Transfers.length 
-      && !data.updatedAccounts.REEF721Transfers.length 
-      && !data.updatedAccounts.REEF1155Transfers.length 
-      && !data.updatedAccounts.boundEvm.length
-    ) {
-      return;
-    }
-  
-    try {
-      await pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
-    } catch (e) {
-      ctx.log.error(`Pusher error: ${e}`);
-      const messagesToDelete = await ctx.store.find(PusherMessage, { order: { id: 'DESC' }, skip: 2 });
-      if (messagesToDelete.length) {
-        await ctx.store.remove(messagesToDelete);
-      }
-      ctx.store.save(new PusherMessage({ id: data.blockId, data: JSON.stringify(data) })).then(() => {
-        ctx.log.info(`Pusher message for block ${data.blockId} saved to database.`);
-        pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, {
-          blockHeight: data.blockHeight,
-          blockId: data.blockId,
-          blockHash: data.blockHash,
-          error: true
-        });
-      });
-    }
-  }
 });
+
+// Delete invalid blocks and associated data from the database
+async function deleteInvalidBlocks(firstInvalidBlockHeight: number) {
+  const eventsToDelete = await ctx.store.find(Event, { where: { block: { height: MoreThanOrEqual(firstInvalidBlockHeight) } } });
+  const stakingToDelete = await ctx.store.find(Staking, { where: { event: In(eventsToDelete) } });
+  const extrinsicsToDelete = await ctx.store.find(Extrinsic, { where: { block: { height: MoreThanOrEqual(firstInvalidBlockHeight) } } });
+  const transfersToDelete = await ctx.store.find(Transfer, { where: { block: { height: MoreThanOrEqual(firstInvalidBlockHeight) } } });
+  const evmEventsToDelete = await ctx.store.find(EvmEvent, { where: { block: { height: MoreThanOrEqual(firstInvalidBlockHeight) } } });
+  const blocksToDelete = await ctx.store.find(Block, { where: { height: MoreThanOrEqual(firstInvalidBlockHeight) } });
+
+  await ctx.store.remove(stakingToDelete);
+  await ctx.store.remove(eventsToDelete);
+  await ctx.store.remove(extrinsicsToDelete);
+  await ctx.store.remove(transfersToDelete);
+  await ctx.store.remove(evmEventsToDelete);
+  await ctx.store.remove(blocksToDelete);
+}
+
+// TODO: remove pusher
+async function pushMessage(data: NewBlockData) {
+  if (!data.updatedContracts.length 
+    && !data.updatedAccounts.REEF20Transfers.length 
+    && !data.updatedAccounts.REEF721Transfers.length 
+    && !data.updatedAccounts.REEF1155Transfers.length 
+    && !data.updatedAccounts.boundEvm.length
+  ) {
+    return;
+  }
+
+  try {
+    await pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
+  } catch (e) {
+    ctx.log.error(`Pusher error: ${e}`);
+  }
+}

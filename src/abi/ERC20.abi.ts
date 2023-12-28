@@ -61,7 +61,8 @@ export const ABI_JSON = [
         ],
         "outputs": [
             {
-                "type": "uint256"
+                "type": "uint256",
+                "name": ""
             }
         ]
     },
@@ -82,7 +83,8 @@ export const ABI_JSON = [
         ],
         "outputs": [
             {
-                "type": "bool"
+                "type": "bool",
+                "name": ""
             }
         ]
     },
@@ -100,7 +102,8 @@ export const ABI_JSON = [
         ],
         "outputs": [
             {
-                "type": "uint256"
+                "type": "uint256",
+                "name": ""
             }
         ]
     },
@@ -113,7 +116,8 @@ export const ABI_JSON = [
         "inputs": [],
         "outputs": [
             {
-                "type": "uint8"
+                "type": "uint8",
+                "name": ""
             }
         ]
     },
@@ -134,7 +138,8 @@ export const ABI_JSON = [
         ],
         "outputs": [
             {
-                "type": "bool"
+                "type": "bool",
+                "name": ""
             }
         ]
     },
@@ -155,7 +160,8 @@ export const ABI_JSON = [
         ],
         "outputs": [
             {
-                "type": "bool"
+                "type": "bool",
+                "name": ""
             }
         ]
     },
@@ -168,7 +174,8 @@ export const ABI_JSON = [
         "inputs": [],
         "outputs": [
             {
-                "type": "string"
+                "type": "string",
+                "name": ""
             }
         ]
     },
@@ -181,7 +188,8 @@ export const ABI_JSON = [
         "inputs": [],
         "outputs": [
             {
-                "type": "string"
+                "type": "string",
+                "name": ""
             }
         ]
     },
@@ -194,7 +202,8 @@ export const ABI_JSON = [
         "inputs": [],
         "outputs": [
             {
-                "type": "uint256"
+                "type": "uint256",
+                "name": ""
             }
         ]
     },
@@ -215,7 +224,8 @@ export const ABI_JSON = [
         ],
         "outputs": [
             {
-                "type": "bool"
+                "type": "bool",
+                "name": ""
             }
         ]
     },
@@ -240,7 +250,8 @@ export const ABI_JSON = [
         ],
         "outputs": [
             {
-                "type": "bool"
+                "type": "bool",
+                "name": ""
             }
         ]
     }

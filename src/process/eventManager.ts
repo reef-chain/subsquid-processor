@@ -1,30 +1,30 @@
-import { SubstrateBlock } from "@subsquid/substrate-processor";
-import { EventData, EventRaw } from "../interfaces/interfaces";
-import { Block, Event, Extrinsic } from "../model";
-import { ctx } from "../processor";
+import { Event } from "@subsquid/substrate-processor";
+import { EventData } from "../interfaces/interfaces";
+import { Block, Event as EventModel, Extrinsic } from "../model";
+import { ctx, Fields } from "../processor";
 import { hexToNativeAddress } from "../util/util";
 
 export class EventManager {  
     eventsData: EventData[] = [];
   
-    process(eventRaw: EventRaw, blockHeader: SubstrateBlock) {
+    process(event: Event<Fields>) {
         const eventData = {
-            id: eventRaw.id,
-            blockId: blockHeader.id,
-            extrinsicId: eventRaw.extrinsic.id,
-            index: eventRaw.indexInBlock,
-            phase: eventRaw.phase[0].toLowerCase() + eventRaw.phase.substring(1),
-            section: eventRaw.name.split(".")[0],
-            method: eventRaw.name.split(".")[1],
-            data: this.getBlockData(eventRaw.name, eventRaw.args),
-            timestamp: new Date(blockHeader.timestamp),
+            id: event.id,
+            blockId: event.block.id,
+            extrinsicId: event.extrinsic!.id,
+            index: event.index,
+            phase: event.phase[0].toLowerCase() + event.phase.substring(1),
+            section: event.name.split(".")[0],
+            method: event.name.split(".")[1],
+            data: this.getBlockData(event.name, event.args),
+            timestamp: new Date(event.block.timestamp!),
         };
 
         this.eventsData.push(eventData);
     }
   
-    async save(blocks: Map<string, Block>, extrinsics: Map<string, Extrinsic>): Promise<Map<string, Event>> {
-        const events: Map<string, Event> = new Map();
+    async save(blocks: Map<string, Block>, extrinsics: Map<string, Extrinsic>): Promise<Map<string, EventModel>> {
+        const events: Map<string, EventModel> = new Map();
         this.eventsData.forEach(eventData => {
             const block = blocks.get(eventData.blockId);
             if (!block) {
@@ -37,8 +37,7 @@ export class EventManager {
                 ctx.log.error(`ERROR saving event: Extrinsic ${eventData.extrinsicId} not found`);
                 return;
             }
-            
-            events.set(eventData.id, new Event({
+            events.set(eventData.id, new EventModel({
                 ...eventData,
                 block: block,
                 extrinsic: extrinsic

@@ -1,7 +1,24 @@
 {
   "outDir": "src/types",
-  "specVersions": "https://reef.archive.subsquid.io/graphql",
-  "events": [],
-  "calls": [],
-  "storage": true
+  "specVersions": "./reefVersions.jsonl",
+  "pallets": {
+    "Balances": {
+      "storage": true
+    },
+    "EVM": {
+      "storage": true
+    },
+    "EvmAccounts": {
+      "storage": true
+    },
+    "Identity": {
+      "storage": true
+    },
+    "Staking": {
+      "storage": true
+    },
+    "System": {
+      "storage": true
+    }
+  }
 }
