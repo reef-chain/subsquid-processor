@@ -7,7 +7,6 @@ import { FirebaseDB } from '../../firebase/firebase';
 
 // TODO: remove pusher
 import Pusher from "pusher";
-
 let pusher: Pusher;
 const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
 const PUSHER_EVENT = process.env.PUSHER_EVENT;
@@ -108,17 +107,17 @@ export class TokenHolderResolver {
 
     await manager.save(entities);
 
-    if (firebaseDB) {
+    if (firebaseDB || pusher) {
       const updatedErc20Accounts = entities
-        .filter(t => t.token.type === 'ERC20' && !!t.signer?.id)
+        .filter(t => t.token.type === 'ERC20' && t.signer && t.signer.id !== '')
         .map(t => t.signer!.id as string)
         .filter((value, index, array) => array.indexOf(value) === index);
       const updatedErc721Accounts = entities
-        .filter(t => t.token.type === 'ERC721' && !!t.signer?.id)
+        .filter(t => t.token.type === 'ERC721' && t.signer && t.signer.id !== '')
         .map(t => t.signer!.id as string)
         .filter((value, index, array) => array.indexOf(value) === index);
       const updatedErc1155Accounts = entities
-        .filter(t => t.token.type === 'ERC1155' && !!t.signer?.id)
+        .filter(t => t.token.type === 'ERC1155' && t.signer && t.signer.id !== '')
         .map(t => t.signer!.id as string)
         .filter((value, index, array) => array.indexOf(value) === index);
       
@@ -128,7 +127,6 @@ export class TokenHolderResolver {
       ) {
         return true;
       }
-      
       const data: NewBlockData = {
         blockHeight: -1,
         blockId: '',
@@ -142,7 +140,7 @@ export class TokenHolderResolver {
         updatedContracts: [],
       };
 
-      firebaseDB.notifyBlock(data);
+      if (firebaseDB) firebaseDB.notifyBlock(data);
 
       // TODO: remove pusher
       if (pusher) pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);

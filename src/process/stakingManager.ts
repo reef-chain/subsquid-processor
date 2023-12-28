@@ -1,40 +1,41 @@
-import { SubstrateBlock } from "@subsquid/substrate-processor";
+import { BlockHeader, Event } from "@subsquid/substrate-processor";
 import { AccountManager } from "./accountManager";
-import { EventRaw, StakingData } from "../interfaces/interfaces";
-import { Account, Event, Staking, StakingType } from "../model";
-import { ctx } from "../processor";
-import { bufferToString, hexToNativeAddress } from "../util/util";
-import { StakingPayeeStorage } from "../types/storage";
+import { StakingData } from "../interfaces/interfaces";
+import { Account, Event as EventModel, Staking, StakingType } from "../model";
+import { ctx, Fields } from "../processor";
+import { hexToNativeAddress } from "../util/util";
+import { staking } from "../types/storage";
 import * as ss58 from '@subsquid/ss58';
+
 export class StakingManager {  
     stakingsData: StakingData[] = [];
   
-    async process(eventRaw: EventRaw, blockHeader: SubstrateBlock, accountManager: AccountManager) {
-        let signerAddress = hexToNativeAddress(eventRaw.args[0]);
-        const amount = eventRaw.args[1];
+    async process(event: Event<Fields>, accountManager: AccountManager) {
+        let signerAddress = hexToNativeAddress(event.args[0]);
+        const amount = event.args[1];
     
-        await accountManager.process(signerAddress, blockHeader);
+        await accountManager.process(signerAddress, event.block);
     
         const addressBytes = ss58.decode(signerAddress).bytes;
-        const rewardDestination = await this.getStakingPayee(blockHeader, addressBytes);
+        const rewardDestination = await this.getStakingPayee(event.block, addressBytes);
         // If account has specified different reward destination we switch the staking signer to that one
         if (rewardDestination?.__kind === 'Account' && rewardDestination.value) {
-            signerAddress = hexToNativeAddress(bufferToString(rewardDestination.value as Buffer));
-            await accountManager.process(signerAddress, blockHeader);
+            signerAddress = hexToNativeAddress(rewardDestination.value);
+            await accountManager.process(signerAddress, event.block);
         }
     
         const stakingData = {
-            id: eventRaw.id,
+            id: event.id,
             signerAddress: signerAddress,
             type: StakingType.Reward,
             amount: amount,
-            timestamp: new Date(blockHeader.timestamp)
+            timestamp: new Date(event.block.timestamp!)
         };
 
         this.stakingsData.push(stakingData);
     }
   
-    async save(accounts: Map<string, Account>, events: Map<string, Event>) {
+    async save(accounts: Map<string, Account>, events: Map<string, EventModel>) {
         const stakings: Staking[] = [];
 
         // TODO: process in parallel
@@ -66,16 +67,13 @@ export class StakingManager {
         await ctx.store.save(stakings);
     }
 
-    private async getStakingPayee(blockHeader: SubstrateBlock, address: Uint8Array) {
-        const storage = new StakingPayeeStorage(ctx, blockHeader);
-
-        if (!storage.isExists) return undefined
-        
-        if (storage.isV5) {
-            return storage.asV5.get(address);
-        } else {
-            throw new Error("Unknown storage version");
+    private async getStakingPayee(blockHeader: BlockHeader<Fields>, address: string) {
+        const storageV5 = staking.payee.v5;
+        if (storageV5.is(blockHeader)) {
+            return storageV5.get(blockHeader, address);
         }
+
+        return undefined;
     }
 }
 

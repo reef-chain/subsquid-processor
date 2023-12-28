@@ -8,6 +8,7 @@ import { TokenHolderResolver } from "./tokenHolder";
 import { TransferResolver } from "./transfer";
 import { EvmEventResolver } from "./evmEvent";
 import { NewlyVerifiedContractQueueResolver } from "./newlyVerifiedContractQueue";
+import { FinalizedBlockResolver } from "./finalizedBlock";
 
 @ObjectType()
 export class Ping {
@@ -34,5 +35,6 @@ export {
   TokenHolderResolver,
   TransferResolver,
   EvmEventResolver,
-  NewlyVerifiedContractQueueResolver
+  NewlyVerifiedContractQueueResolver,
+  FinalizedBlockResolver
 }

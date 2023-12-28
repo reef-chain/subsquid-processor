@@ -1,17 +1,16 @@
-import { EventRaw, TransferData } from "../../interfaces/interfaces";
+import { ethers } from "ethers";
+import { Event } from "@subsquid/substrate-processor";
+import { TransferData } from "../../interfaces/interfaces";
 import { TransferType, VerifiedContract } from "../../model";
 import * as erc1155 from "../../abi/ERC1155";
-import { SubstrateBlock } from "@subsquid/substrate-processor";
-import { findNativeAddress, toChecksumAddress } from "../../util/util";
-import { ctx, headReached, pinToIPFSEnabled } from "../../processor";
+import { findNativeAddress, toChainContext, toChecksumAddress } from "../../util/util";
+import { ctx, Fields, headReached, pinToIPFSEnabled } from "../../processor";
 import { TokenHolderManager } from "../tokenHolderManager";
 import { AccountManager } from "../accountManager";
-import { ethers } from "ethers";
 import { pinToIPFS } from "../../util/ipfs";
 
 export const processErc1155BatchTransfer = async (
-    eventRaw: EventRaw,
-    blockHeader: SubstrateBlock,
+    event: Event<Fields>,
     token: VerifiedContract,
     feeAmount: bigint,
     accountManager: AccountManager,
@@ -19,13 +18,13 @@ export const processErc1155BatchTransfer = async (
 ): Promise<TransferData[]> => {    
     const transfersData: TransferData[] = [];
     const tokenAddress = token.id;
-    const [, from, to, ids, values_ ] = erc1155.events.TransferBatch.decode(eventRaw.args.log || eventRaw.args);
+    const [, from, to, ids, values_ ] = erc1155.events.TransferBatch.decode(event.args.log || event.args);
 
-    if (pinToIPFSEnabled && from === ethers.constants.AddressZero) {
+    if (pinToIPFSEnabled && from === ethers.ZeroAddress) {
         // It's a mint. Pin to IPFS.
         for (let i = 0; i < ids.length; i++) {
             try {
-                const uri = await new erc1155.Contract(ctx, blockHeader, tokenAddress).uri(ids[i]);
+                const uri = await new erc1155.Contract(toChainContext(ctx), event.block, tokenAddress).uri(ids[i]);
                 pinToIPFS(uri.replace('{id}', ids[i].toString().padStart(64, '0')));
             } catch (e) {
                 ctx.log.error(`Failed to pin to IPFS: ${e}`);
@@ -33,44 +32,44 @@ export const processErc1155BatchTransfer = async (
         }
     }
 
-    const toAddress = await findNativeAddress(blockHeader, to);
-    const fromAddress = await findNativeAddress(blockHeader, from);
+    const toAddress = await findNativeAddress(event.block, to);
+    const fromAddress = await findNativeAddress(event.block, from);
     const toEvmAddress = toChecksumAddress(to);
     const fromEvmAddress = toChecksumAddress(from);
 
-    if (toAddress !== '0x') accountManager.process(toAddress, blockHeader);
-    if (ethers.utils.isAddress(toEvmAddress) && toEvmAddress !== ethers.constants.AddressZero) {
-        let toBalances = Array(ids.length).fill(ethers.BigNumber.from(0));
+    if (toAddress !== '0x') accountManager.process(toAddress, event.block);
+    if (ethers.isAddress(toEvmAddress) && toEvmAddress !== ethers.ZeroAddress) {
+        let toBalances = Array(ids.length).fill(BigInt(0));
         if (headReached) {
             // We start updating balances only after the head block has been reached
             try {
-                toBalances = await new erc1155.Contract(ctx, blockHeader, tokenAddress).balanceOfBatch(Array.from({length: ids.length}, () => toEvmAddress), ids);
+                toBalances = await new erc1155.Contract(toChainContext(ctx), event.block, tokenAddress).balanceOfBatch(Array.from({length: ids.length}, () => toEvmAddress), ids);
             } catch (e) {}
         }
         for (let i = 0; i < ids.length; i++) {
-            tokenHolderManager.process(toAddress, toEvmAddress, BigInt(toBalances[i].toString()), blockHeader.timestamp, token, Number(ids[i]));
+            tokenHolderManager.process(toAddress, toEvmAddress, BigInt(toBalances[i].toString()), event.block.timestamp!, token, Number(ids[i]));
         }
     }
 
-    if (fromAddress !== '0x') accountManager.process(fromAddress, blockHeader);
-    if (ethers.utils.isAddress(fromEvmAddress) && fromEvmAddress !== ethers.constants.AddressZero) {
-        let fromBalances = Array(ids.length).fill(ethers.BigNumber.from(0));
+    if (fromAddress !== '0x') accountManager.process(fromAddress, event.block);
+    if (ethers.isAddress(fromEvmAddress) && fromEvmAddress !== ethers.ZeroAddress) {
+        let fromBalances = Array(ids.length).fill(BigInt(0));
         if (headReached) {
             // We start updating balances only after the head block has been reached
             try {
-                fromBalances = await new erc1155.Contract(ctx, blockHeader, tokenAddress).balanceOfBatch(Array.from({length: ids.length}, () => fromEvmAddress), ids);
+                fromBalances = await new erc1155.Contract(toChainContext(ctx), event.block, tokenAddress).balanceOfBatch(Array.from({length: ids.length}, () => fromEvmAddress), ids);
             } catch (e) {}
         }
         for (let i = 0; i < ids.length; i++) {
-            tokenHolderManager.process(fromAddress, fromEvmAddress, BigInt(fromBalances[i].toString()), blockHeader.timestamp, token, Number(ids[i]));
+            tokenHolderManager.process(fromAddress, fromEvmAddress, BigInt(fromBalances[i].toString()), event.block.timestamp!, token, Number(ids[i]));
         }
     }
 
     for (let i = 0; i < ids.length; i++) {
         transfersData.push({
-            id: `${eventRaw.id}-${i}`,
-            blockId: blockHeader.id,
-            extrinsicId: eventRaw.extrinsic.id,
+            id: `${event.id}-${i}`,
+            blockId: event.block.id,
+            extrinsicId: event.extrinsic!.id,
             toAddress: toAddress,
             fromAddress: fromAddress,
             token: token,
@@ -80,7 +79,7 @@ export const processErc1155BatchTransfer = async (
             reefswapAction: null,
             amount: BigInt(values_[i].toString()),
             success: true,
-            timestamp: new Date(blockHeader.timestamp),
+            timestamp: new Date(event.block.timestamp!),
             denom: null,
             nftId: BigInt(ids[i].toString()),
             errorMessage: '',

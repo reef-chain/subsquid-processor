@@ -1,6 +1,7 @@
 export const ABI_JSON = [
     {
         "type": "constructor",
+        "stateMutability": "undefined",
         "payable": false,
         "inputs": [
             {
@@ -22,7 +23,8 @@ export const ABI_JSON = [
         "inputs": [],
         "outputs": [
             {
-                "type": "address"
+                "type": "address",
+                "name": ""
             }
         ]
     },
@@ -136,7 +138,8 @@ export const ABI_JSON = [
         "inputs": [],
         "outputs": [
             {
-                "type": "address"
+                "type": "address",
+                "name": ""
             }
         ]
     },
@@ -848,5 +851,9 @@ export const ABI_JSON = [
                 "name": "amounts"
             }
         ]
+    },
+    {
+        "type": "receive",
+        "stateMutability": "payable"
     }
 ]

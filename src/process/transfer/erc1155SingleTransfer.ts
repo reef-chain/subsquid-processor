@@ -1,66 +1,65 @@
-import { EventRaw, TransferData } from "../../interfaces/interfaces";
+import { ethers } from "ethers";
+import { Event } from "@subsquid/substrate-processor";
+import { TransferData } from "../../interfaces/interfaces";
 import { TransferType, VerifiedContract } from "../../model";
 import * as erc1155 from "../../abi/ERC1155";
-import { SubstrateBlock } from "@subsquid/substrate-processor";
-import { findNativeAddress, toChecksumAddress } from "../../util/util";
+import { findNativeAddress, toChainContext, toChecksumAddress } from "../../util/util";
 import { TokenHolderManager } from "../tokenHolderManager";
 import { AccountManager } from "../accountManager";
-import { ethers } from "ethers";
-import { ctx, headReached, pinToIPFSEnabled } from "../../processor";
+import { ctx, Fields, headReached, pinToIPFSEnabled } from "../../processor";
 import { pinToIPFS } from "../../util/ipfs";
 
 export const processErc1155SingleTransfer = async (
-    eventRaw: EventRaw,
-    blockHeader: SubstrateBlock,
+    event: Event<Fields>,
     token: VerifiedContract,
     feeAmount: bigint,
     accountManager: AccountManager,
     tokenHolderManager: TokenHolderManager
 ): Promise<TransferData> => {    
     const tokenAddress = token.id;
-    const [, from, to, id, value ] = erc1155.events.TransferSingle.decode(eventRaw.args.log || eventRaw.args);
+    const [, from, to, id, value ] = erc1155.events.TransferSingle.decode(event.args.log || event.args);
 
-    if (pinToIPFSEnabled && from === ethers.constants.AddressZero) {
+    if (pinToIPFSEnabled && from === ethers.ZeroAddress) {
         // It's a mint. Pin to IPFS.
         try {
-            const uri = await new erc1155.Contract(ctx, blockHeader, tokenAddress).uri(id);
+            const uri = await new erc1155.Contract(toChainContext(ctx), event.block, tokenAddress).uri(id);
             pinToIPFS(uri.replace('{id}', id.toString().padStart(64, '0')));
         } catch (e) {
             ctx.log.error(`Failed to pin to IPFS: ${e}`);
         }
     }
 
-    const toAddress = await findNativeAddress(blockHeader, to);
+    const toAddress = await findNativeAddress(event.block, to);
     const toEvmAddress = toChecksumAddress(to);
-    if (toAddress !== '0x') accountManager.process(toAddress, blockHeader);
-    if (ethers.utils.isAddress(toEvmAddress) && toEvmAddress !== ethers.constants.AddressZero) {
-        let toBalance = ethers.BigNumber.from(0);
+    if (toAddress !== '0x') accountManager.process(toAddress, event.block);
+    if (ethers.isAddress(toEvmAddress) && toEvmAddress !== ethers.ZeroAddress) {
+        let toBalance = BigInt(0);
         if (headReached) {
             // We start updating balance only after the head block has been reached
             try {
-                toBalance = await new erc1155.Contract(ctx, blockHeader, tokenAddress).balanceOf(toEvmAddress, id);
+                toBalance = await new erc1155.Contract(toChainContext(ctx), event.block, tokenAddress).balanceOf(toEvmAddress, id);
             } catch (e) {}
         }
-        tokenHolderManager.process(toAddress, toEvmAddress, BigInt(toBalance.toString()), blockHeader.timestamp, token, Number(id));
+        tokenHolderManager.process(toAddress, toEvmAddress, BigInt(toBalance.toString()), event.block.timestamp!, token, Number(id));
     }
         
-    const fromAddress = await findNativeAddress(blockHeader, from);
+    const fromAddress = await findNativeAddress(event.block, from);
     const fromEvmAddress = toChecksumAddress(from);
-    if (fromAddress !== '0x') accountManager.process(fromAddress, blockHeader)
-    if (ethers.utils.isAddress(fromEvmAddress) && fromEvmAddress !== ethers.constants.AddressZero) {
-        let fromBalance = ethers.BigNumber.from(0);
+    if (fromAddress !== '0x') accountManager.process(fromAddress, event.block)
+    if (ethers.isAddress(fromEvmAddress) && fromEvmAddress !== ethers.ZeroAddress) {
+        let fromBalance = BigInt(0);
         if (headReached) {
             try {
-                fromBalance = await new erc1155.Contract(ctx, blockHeader, tokenAddress).balanceOf(fromEvmAddress, id);
+                fromBalance = await new erc1155.Contract(toChainContext(ctx), event.block, tokenAddress).balanceOf(fromEvmAddress, id);
             } catch (e) {}
         }
-        tokenHolderManager.process(fromAddress, fromEvmAddress, BigInt(fromBalance.toString()), blockHeader.timestamp, token, Number(id));
+        tokenHolderManager.process(fromAddress, fromEvmAddress, BigInt(fromBalance.toString()), event.block.timestamp!, token, Number(id));
     }
 
     const transferData = {
-        id: eventRaw.id,
-        blockId: blockHeader.id,
-        extrinsicId: eventRaw.extrinsic.id,
+        id: event.id,
+        blockId: event.block.id,
+        extrinsicId: event.extrinsic!.id,
         toAddress: toAddress,
         fromAddress: fromAddress,
         token: token,
@@ -70,7 +69,7 @@ export const processErc1155SingleTransfer = async (
         reefswapAction: null,
         amount: BigInt(value.toString()),
         success: true,
-        timestamp: new Date(blockHeader.timestamp),
+        timestamp: new Date(event.block.timestamp!),
         denom: null,
         nftId: BigInt(id.toString()),
         errorMessage: '',
