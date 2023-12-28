@@ -130,5 +130,3 @@ export class TransferManager {
         await ctx.store.insert(transfers);
     }
 }
-
-  

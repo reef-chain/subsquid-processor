@@ -127,7 +127,6 @@ export class TokenHolderResolver {
       ) {
         return true;
       }
-
       const data: NewBlockData = {
         blockHeight: -1,
         blockId: '',

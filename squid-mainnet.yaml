@@ -77,6 +77,8 @@ deploy:
     - FIREBASE_CLIENT_EMAIL
     - FIREBASE_PK
     - PUSHER_SECRET
+    - FIREBASE_CLIENT_EMAIL
+    - FIREBASE_PK
 
 scale:
   dedicated: true
