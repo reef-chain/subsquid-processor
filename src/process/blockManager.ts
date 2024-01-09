@@ -1,6 +1,6 @@
 import { BlockHeader } from "@subsquid/substrate-processor";
 import { Block } from "../model";
-import { Fields, ctx } from "../processor";
+import { Fields, SUPPORT_HOT_BLOCKS, ctx } from "../processor";
 import { hexToNativeAddress } from "../util/util";
 
 export class BlockManager {  
@@ -15,7 +15,7 @@ export class BlockManager {
             stateRoot: blockHeader.stateRoot,
             parentHash: blockHeader.parentHash,
             extrinsicRoot: blockHeader.extrinsicsRoot,
-            finalized: false,
+            finalized: SUPPORT_HOT_BLOCKS ? false : true,
             timestamp: new Date(blockHeader.timestamp!),
             processorTimestamp: new Date(),
         });

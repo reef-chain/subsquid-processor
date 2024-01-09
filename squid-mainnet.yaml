@@ -21,6 +21,8 @@ deploy:
         true
       USE_ONLY_RPC:
         false
+      SUPPORT_HOT_BLOCKS:
+        true
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:

@@ -42,6 +42,7 @@ if (!network) {
 const RPC_URL = process.env[`NODE_RPC_WS_${network.toUpperCase()}`];
 const AQUARIUM_ARCHIVE_NAME = process.env[`ARCHIVE_LOOKUP_NAME_${network.toUpperCase()}`] as KnownArchives;
 const USE_ONLY_RPC = process.env.USE_ONLY_RPC === 'true';
+export const SUPPORT_HOT_BLOCKS = process.env.SUPPORT_HOT_BLOCKS === 'true';
 const ARCHIVE = USE_ONLY_RPC ? undefined : lookupArchive(AQUARIUM_ARCHIVE_NAME, { release: 'ArrowSquid' });
 const START_BLOCK = parseInt(process.env.START_BLOCK || '0');
 export const REEFSWAP_ROUTER_ADDRESS = process.env[`REEFSWAP_ROUTER_ADDRESS_${network.toUpperCase()}`];
@@ -50,10 +51,11 @@ console.log(`
     RPC URL: ${RPC_URL}
     Reefswap Router: ${REEFSWAP_ROUTER_ADDRESS}
     Archive: ${USE_ONLY_RPC ? 'None' : ARCHIVE}
+    Support hot blocks: ${SUPPORT_HOT_BLOCKS}
     Start block: ${START_BLOCK}
 `);
 
-const database = new TypeormDatabase();
+const database = new TypeormDatabase({supportHotBlocks: SUPPORT_HOT_BLOCKS});
 const fields = {
   event: {
     phase: true,
