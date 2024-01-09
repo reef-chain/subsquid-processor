@@ -62,17 +62,18 @@ export class ContractResolver {
     @Arg('storageLimit') storageLimit: string,
     @Arg('timestamp') timestamp: number,
   ): Promise<Boolean> {
+    console.debug(`ContractResolver.saveContract: ${id}`);
     const manager = await this.tx();
 
     const extrinsic = await manager.findOneBy(Extrinsic, { id: extrinsicId });
     if (!extrinsic) {
-      console.log(`ERROR inserting contract ${id}: extrinsic not found in DB.`);
+      console.error(`ERROR inserting contract ${id}: extrinsic not found in DB.`);
       return false;
     }
 
     const signer = await manager.findOneBy(Account, { id: signerAddress });
     if (!signer) {
-      console.log(`ERROR inserting contract ${id}: signer not found in DB.`);
+      console.error(`ERROR inserting contract ${id}: signer not found in DB.`);
       return false;
     }
 

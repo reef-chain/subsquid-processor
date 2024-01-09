@@ -86,6 +86,7 @@ export class EvmEventResolver {
   @Mutation(() => Boolean) async updateEvmEventsDataParsed(
     @Arg('evmEvents', () => [EvmEventDataParsedInput]) evmEvents: EvmEventDataParsedInput[],
   ): Promise<Boolean> {
+    console.debug(`EvmEventResolver.updateEvmEventsDataParsed: ${evmEvents.length} events (first: ${evmEvents.length ? evmEvents[0].id : ''}))`);
     const manager = await this.tx();
 
     const updatePromises = evmEvents.map((evmEvent) => manager.update(

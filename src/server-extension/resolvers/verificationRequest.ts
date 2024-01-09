@@ -21,6 +21,7 @@ export class VerificationRequestResolver {
     @Arg('license') license: string,
     @Arg('timestamp') timestamp: number,
   ): Promise<Boolean> {
+    console.debug(`VerificationRequestResolver.saveVerificationRequest: ${id}`);
     const manager = await this.tx();
     
     const verificationRequest = new VerificationRequest({

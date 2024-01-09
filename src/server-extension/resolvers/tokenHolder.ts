@@ -74,6 +74,7 @@ export class TokenHolderResolver {
   @Mutation(() => Boolean) async saveTokenHolders(
     @Arg('tokenHolders', () => [TokenHolderInput]) tokenHolders: TokenHolderInput[],
   ): Promise<Boolean> {
+    console.debug(`TokenHolderResolver.saveTokenHolders: ${tokenHolders.length} items (first: ${tokenHolders.length ? tokenHolders[0].id : ''})`);
     const manager = await this.tx();
 
     const tokenIds = tokenHolders.map((tokenHolder) => tokenHolder.tokenId)

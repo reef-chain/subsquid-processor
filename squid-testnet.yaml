@@ -81,7 +81,7 @@ deploy:
     - FIREBASE_PK
 
 scale:
-  dedicated: true
+  dedicated: false
   addons:
     postgres:
       storage: 100Gi

@@ -65,6 +65,7 @@ export class TransferResolver {
   @Mutation(() => Boolean) async saveTransfers(
     @Arg('transfers', () => [TransferInput]) transfers: TransferInput[],
   ): Promise<Boolean> {
+    console.debug(`TransferResolver.saveTransfers: ${transfers.length} items (first: ${transfers.length ? transfers[0].id : ''})`);
     const manager = await this.tx();
 
     const blockIds = transfers.map((transfer) => transfer.blockId)

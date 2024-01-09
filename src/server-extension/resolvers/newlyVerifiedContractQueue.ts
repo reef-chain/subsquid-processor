@@ -9,6 +9,7 @@ export class NewlyVerifiedContractQueueResolver {
   @Mutation(() => Boolean) async deleteNewlyVerifiedContractQueue(
     @Arg('id') id: string
   ): Promise<Boolean> {
+    console.debug(`NewlyVerifiedContractQueueResolver.deleteNewlyVerifiedContractQueue: ${id}`);
     const manager = await this.tx();
     await manager.delete(NewlyVerifiedContractQueue, { id });
     return true;

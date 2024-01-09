@@ -1,7 +1,6 @@
 import { Store, TypeormDatabase } from "@subsquid/typeorm-store";
 import { DataHandlerContext, SubstrateBatchProcessor } from "@subsquid/substrate-processor";
 import { KnownArchives, lookupArchive } from "@subsquid/archive-registry";
-import { MoreThanOrEqual, In } from "typeorm";
 import { NewBlockData } from "./interfaces/interfaces";
 import { AccountManager } from "./process/accountManager";
 import { BlockManager } from "./process/blockManager";
@@ -14,7 +13,7 @@ import { TokenHolderManager } from "./process/tokenHolderManager";
 import { StakingManager } from "./process/stakingManager";
 import { updateFromHead } from "./process/updateFromHead";
 import { hexToNativeAddress, REEF_CONTRACT_ADDRESS } from "./util/util";
-import { Account, Block, Event, EvmEvent, Extrinsic, Staking, Transfer, VerifiedContract } from "./model";
+import { Account, Extrinsic, VerifiedContract } from "./model";
 import { FirebaseDB } from "./firebase/firebase";
 
 // TODO: remove pusher
@@ -101,8 +100,6 @@ console.log(`Pin to IPFS: ${pinToIPFSEnabled}`);
 
 let isFirstBatch = true;
 let newBlockData: NewBlockData;
-let latestBlockHeight = 0;
-let firstInvalidBlockHeight = 0;
 
 const firebaseDB = process.env.NOTIFY_NEW_BLOCKS === 'true' ? new FirebaseDB() : null;
 console.log(`Notify new blocks: ${!!firebaseDB}`);
@@ -160,11 +157,6 @@ processor.run(database, async (ctx_) => {
 
   // Process blocks
   for (const block of ctx.blocks) {
-    if (block.header.height <= latestBlockHeight && firstInvalidBlockHeight !== 0) {
-      // A previously unfinalized block was not valid. This block and all subsequent blocks have to be deleted from the database.
-      firstInvalidBlockHeight = block.header.height;
-    }
-
     if (!headReached && ctx.isHead) {
       headReached = true;
       await updateFromHead(block.header);
@@ -220,11 +212,6 @@ processor.run(database, async (ctx_) => {
     }
   }
 
-  if (firstInvalidBlockHeight !== 0) {
-    await deleteInvalidBlocks(firstInvalidBlockHeight);
-    firstInvalidBlockHeight = 0;
-  }
-
   // Save data to database
   ctx.log.info(`Saving blocks from ${ctx.blocks[0].header.height} to ${ctx.blocks[ctx.blocks.length - 1].header.height}`);
   const blocks = await blockManager.save();
@@ -236,7 +223,6 @@ processor.run(database, async (ctx_) => {
   await transferManager.save(blocks, extrinsics, accounts, events);
   await tokenHolderManager.save(accounts);
   await stakingManager.save(accounts, events);
-  latestBlockHeight = ctx.blocks[ctx.blocks.length - 1].header.height;
 
   // Update list of updated accounts for notification
   if ((firebaseDB || pusher) && headReached) {
@@ -270,23 +256,6 @@ processor.run(database, async (ctx_) => {
   }
   
 });
-
-// Delete invalid blocks and associated data from the database
-async function deleteInvalidBlocks(firstInvalidBlockHeight: number) {
-  const eventsToDelete = await ctx.store.find(Event, { where: { block: { height: MoreThanOrEqual(firstInvalidBlockHeight) } } });
-  const stakingToDelete = await ctx.store.find(Staking, { where: { event: In(eventsToDelete) } });
-  const extrinsicsToDelete = await ctx.store.find(Extrinsic, { where: { block: { height: MoreThanOrEqual(firstInvalidBlockHeight) } } });
-  const transfersToDelete = await ctx.store.find(Transfer, { where: { block: { height: MoreThanOrEqual(firstInvalidBlockHeight) } } });
-  const evmEventsToDelete = await ctx.store.find(EvmEvent, { where: { block: { height: MoreThanOrEqual(firstInvalidBlockHeight) } } });
-  const blocksToDelete = await ctx.store.find(Block, { where: { height: MoreThanOrEqual(firstInvalidBlockHeight) } });
-
-  await ctx.store.remove(stakingToDelete);
-  await ctx.store.remove(eventsToDelete);
-  await ctx.store.remove(extrinsicsToDelete);
-  await ctx.store.remove(transfersToDelete);
-  await ctx.store.remove(evmEventsToDelete);
-  await ctx.store.remove(blocksToDelete);
-}
 
 // TODO: remove pusher
 async function pushMessage(data: NewBlockData) {

@@ -1,6 +1,6 @@
 import type { EntityManager } from 'typeorm'
 import { LessThanOrEqual } from "typeorm";
-import { Arg, Mutation,Resolver } from 'type-graphql'
+import { Arg, Mutation, Resolver } from 'type-graphql'
 import { Block } from '../../model';
 
 @Resolver()
@@ -16,7 +16,7 @@ export class FinalizedBlockResolver {
 
     const block = await manager.findOneBy(Block, { height: height });
     if (block && block.hash !== hash) {
-      console.log(`ERROR on finalized block ${height}: hash mismatch.`);
+      console.error(`ERROR on finalized block ${height}: hash mismatch.`);
       return false;
     }
 

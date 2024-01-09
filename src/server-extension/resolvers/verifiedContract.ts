@@ -23,11 +23,12 @@ export class VerifiedContractResolver {
     @Arg('timestamp') timestamp: number,
     @Arg('approved') approved: boolean,
   ): Promise<Boolean> {
+    console.debug(`VerifiedContractResolver.saveVerifiedContract: ${id}`);
     const manager = await this.tx();
 
     const contract = await manager.findOneBy(Contract, { id: id });
     if (!contract) {
-      console.log(`ERROR inserting verified contract ${id}: contract not found in DB.`);
+      console.error(`ERROR inserting verified contract ${id}: contract not found in DB.`);
       return false;
     }
     
@@ -58,11 +59,12 @@ export class VerifiedContractResolver {
     @Arg('id') id: string,
     @Arg('contractData') contractData: string,
   ): Promise<Boolean> {
+    console.debug(`VerifiedContractResolver.updateVerifiedContractData: ${id}`);
     const manager = await this.tx();
 
     const verifiedContract = await manager.findOneBy(VerifiedContract, { id: id });
     if (!verifiedContract) {
-      console.log(`ERROR updating verified contract ${id} contractData: not found in DB.`);
+      console.error(`ERROR updating verified contract ${id} contractData: not found in DB.`);
       return false;
     }
 
@@ -82,11 +84,12 @@ export class VerifiedContractResolver {
     @Arg('id') id: string,
     @Arg('approved') approved: boolean,
   ): Promise<Boolean> {
+    console.debug(`VerifiedContractResolver.updateVerifiedContractApproved: ${id}`);
     const manager = await this.tx();
 
     const verifiedContract = await manager.findOneBy(VerifiedContract, { id: id });
     if (!verifiedContract) {
-      console.log(`ERROR updating verified contract ${id} approved: not found in DB.`);
+      console.error(`ERROR updating verified contract ${id} approved: not found in DB.`);
       return false;
     }
 
