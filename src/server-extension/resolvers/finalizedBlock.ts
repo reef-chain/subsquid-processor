@@ -11,7 +11,7 @@ export class FinalizedBlockResolver {
     @Arg('height') height: number,
     @Arg('hash') hash: string
   ): Promise<Boolean> {
-    console.debug(`FinalizedBlockResolver.newFinalizedBlock: ${height} ${hash}`);
+    console.debug(`FinalizedBlockResolver.newFinalizedBlock: ${height} ${hash.substring(2, 8)}`);
     const manager = await this.tx();
 
     const block = await manager.findOneBy(Block, { height: height });
