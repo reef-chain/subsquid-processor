@@ -221,8 +221,8 @@ processor.run(database, async (ctx_) => {
   const events = await eventManager.save(blocks, extrinsics);
   const accounts = await accountManager.save(blocks);
   await contractManager.save(accounts, extrinsics);
-  await evmEventManager.save(blocks, events);
-  await transferManager.save(blocks, extrinsics, accounts, events);
+  await evmEventManager.save();
+  await transferManager.save(accounts);
   await tokenHolderManager.save(accounts);
   await stakingManager.save(accounts, events);
 

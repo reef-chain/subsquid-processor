@@ -3,7 +3,7 @@ import { AccountManager } from "../accountManager";
 import { TransferData } from "../../interfaces/interfaces";
 import { TransferType, VerifiedContract } from "../../model";
 import { getErrorMessage, hexToNativeAddress } from "../../util/util";
-import { Fields } from "../../processor";
+import { Fields, SUPPORT_HOT_BLOCKS } from "../../processor";
 
 export const processNativeTransfer = async (
     event: Event<Fields>, 
@@ -26,7 +26,10 @@ export const processNativeTransfer = async (
 
     const transferData = {
         id: event.id,
-        blockId: event.block.id,
+        blockHeight: event.block.height,
+        blockHash: event.block.hash,
+        finalized: SUPPORT_HOT_BLOCKS ? false : true,
+        extrinsicIndex: event.extrinsic!.index,
         extrinsicId: event.extrinsic!.id,
         fromAddress: from,
         toAddress: to,

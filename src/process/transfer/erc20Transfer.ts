@@ -6,7 +6,7 @@ import * as erc20 from "../../abi/ERC20";
 import { findNativeAddress, toChainContext, toChecksumAddress } from "../../util/util";
 import { AccountManager } from "../accountManager";
 import { TokenHolderManager } from "../tokenHolderManager";
-import { ctx, Fields, headReached } from "../../processor";
+import { ctx, Fields, headReached, SUPPORT_HOT_BLOCKS } from "../../processor";
 import { extractReefswapRouterData } from "./reefswapRouterData";
 
 export const processErc20Transfer = async (
@@ -51,8 +51,10 @@ export const processErc20Transfer = async (
 
     const transferData = {
         id: event.id,
-        blockId: event.block.id,
-        extrinsicId: event.extrinsic!.id,
+        blockHeight: event.block.height,
+        blockHash: event.block.hash,
+        finalized: SUPPORT_HOT_BLOCKS ? false : true,
+        extrinsicIndex: event.extrinsic!.index,
         toAddress: toAddress,
         fromAddress: fromAddress,
         token: token,

@@ -65,34 +65,11 @@ export class TransferManager {
         }
     }
   
-    async save(
-        blocks: Map<string, Block>, 
-        extrinsics: Map<string, Extrinsic>,
-        accounts: Map<string, Account>,
-        events: Map<string, EventModel>
-    ) {
+    async save(accounts: Map<string, Account>) {
         const transfers: Transfer[] = [];
 
         // TODO: process in parallel
-        for (const transferData of this.transfersData) {
-            const block = blocks.get(transferData.blockId);
-            if (!block) {
-                ctx.log.error(`ERROR saving transfer: Block ${transferData.blockId} not found`);
-                continue;
-            } 
-
-            const extrinsic = extrinsics.get(transferData.extrinsicId);
-            if (!extrinsic) {
-                ctx.log.error(`ERROR saving transfer: Extrinsic ${transferData.extrinsicId} not found`);
-                continue;
-            }
-
-            const event = events.get(transferData.id);
-            if (!event) {
-                ctx.log.error(`ERROR saving transfer: Event ${transferData.id} not found`);
-                continue;
-            }
-            
+        for (const transferData of this.transfersData) {            
             // Search to account in cached accounts
             let to = accounts.get(transferData.toAddress);
             if (!to) {
@@ -118,9 +95,6 @@ export class TransferManager {
             transfers.push(
                 new Transfer({
                     ...transferData,
-                    block: block,
-                    extrinsic: extrinsic,
-                    event: event,
                     to: to,
                     from: from
                 })

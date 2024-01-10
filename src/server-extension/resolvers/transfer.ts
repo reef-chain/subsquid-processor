@@ -1,18 +1,21 @@
 import { BigInteger } from '@subsquid/graphql-server';
-import { Arg, Field, InputType, Mutation, Resolver } from 'type-graphql'
+import { Arg, Field, InputType, Int, Mutation, Resolver } from 'type-graphql'
 import { EntityManager, In } from 'typeorm'
-import { Account, Block, Event, Extrinsic, Transfer, TransferType, VerifiedContract } from '../../model';
+import { Account, Transfer, TransferType, VerifiedContract } from '../../model';
 
 @InputType()
 export class TransferInput {
   @Field(() => String, { nullable: false })
   id!: string;
 
-  @Field(() => String, { nullable: true })
-  blockId!: string;
+  @Field(() => Int, { nullable: true })
+  blockHeight!: number;
 
   @Field(() => String, { nullable: true })
-  extrinsicId!: string;
+  blockHash!: string;
+
+  @Field(() => Int, { nullable: true })
+  extrinsicIndex!: number;
 
   @Field(() => String, { nullable: true })
   toId!: string;
@@ -53,6 +56,9 @@ export class TransferInput {
   @Field(() => BigInteger, { nullable: false })
   timestamp!: bigint;
 
+  @Field(() => Boolean, { nullable: false })
+  finalized!: boolean;
+
   constructor(props: Partial<TransferInput>) {
     Object.assign(this, props);
   }
@@ -68,18 +74,6 @@ export class TransferResolver {
     console.debug(`TransferResolver.saveTransfers: ${transfers.length} items (first: ${transfers.length ? transfers[0].id : ''})`);
     const manager = await this.tx();
 
-    const blockIds = transfers.map((transfer) => transfer.blockId)
-      .filter((id, index, self) => id && self.indexOf(id) === index);
-    const blocks: Block[] = await manager.findBy(Block, { id: In(blockIds) });
-
-    const extrinsicIds = transfers.map((transfer) => transfer.extrinsicId)
-      .filter((id, index, self) => id && self.indexOf(id) === index);
-    const extrinsics: Extrinsic[] = await manager.findBy(Extrinsic, { id: In(extrinsicIds) });
-
-    const eventIds = transfers.map((transfer) => transfer.id)
-      .filter((id, index, self) => id && self.indexOf(id) === index);
-    const events: Event[] = await manager.findBy(Event, { id: In(eventIds) });
-
     const toIds = transfers.map((transfer) => transfer.toId)
       .filter((id, index, self) => id && self.indexOf(id) === index);
     const tos: Account[] = await manager.findBy(Account, { id: In(toIds) });
@@ -93,18 +87,6 @@ export class TransferResolver {
     const tokens: VerifiedContract[] = await manager.findBy(VerifiedContract, { id: In(tokenIds) });
     
     const entities: Transfer[] = transfers.map((transfer) => {
-      let block: Block | undefined = undefined;
-      if (transfer.blockId) {
-        block = blocks.find((b) => b.id === transfer.blockId);
-      }
-
-      let extrinsic: Extrinsic | undefined = undefined;
-      if (transfer.extrinsicId) {
-        extrinsic = extrinsics.find((e) => e.id === transfer.extrinsicId);
-      }
-
-      let event: Event | undefined = events.find((e) => e.id === transfer.id);
-
       let to: Account | undefined = undefined;
       if (transfer.toId) {
         to = tos.find((a) => a.id === transfer.toId);
@@ -122,9 +104,9 @@ export class TransferResolver {
   
       return new Transfer({
         id: transfer.id,
-        block,
-        extrinsic,
-        event,
+        blockHeight: transfer.blockHeight,
+        blockHash: transfer.blockHash,
+        extrinsicIndex: transfer.extrinsicIndex,
         to,
         from,
         token,
@@ -137,7 +119,8 @@ export class TransferResolver {
         nftId: transfer.nftId,
         errorMessage: transfer.errorMessage,
         success: transfer.success,
-        timestamp: new Date(Number(transfer.timestamp))
+        timestamp: new Date(Number(transfer.timestamp)),
+        finalized: transfer.finalized,
       });
     });
 

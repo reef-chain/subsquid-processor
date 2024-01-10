@@ -90,8 +90,9 @@ type Contract @entity @index(fields: ["extrinsic", "id"], unique: true) {
 type EvmEvent @entity {
   "000000..00<blockNum>-<shorthash>-000<index>"
   id: ID!
-  event: Event!
-  block: Block!
+  blockHeight: Int! @index
+  blockHash: String! @index
+  finalized: Boolean! @index
   eventIndex: Int!
   extrinsicIndex: Int!
   contractAddress: String! @index
@@ -108,10 +109,12 @@ type EvmEvent @entity {
 
 # ================ Token transfers ========================
 
-type Transfer @entity @index(fields: ["id", "extrinsic"], unique: true) @index (fields: ["id", "event"], unique: true) {
+type Transfer @entity {
   id: ID!
-  block: Block!
-  extrinsic: Extrinsic!
+  blockHeight: Int! @index
+  blockHash: String! @index
+  finalized: Boolean! @index
+  extrinsicIndex: Int!
   event: Event!
   to: Account!
   from: Account!

@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: reef-explorer-testnet
-version: 6
+version: 8
 description: |-
   Reef Chain testnet explorer data
 
@@ -14,11 +14,11 @@ deploy:
       NETWORK:
         testnet
       HEAD_REACHED:
-        true
+        false
       PIN_TO_IPFS:
-        true
+        false
       NOTIFY_NEW_BLOCKS:
-        true
+        false
       USE_ONLY_RPC:
         true
       SUPPORT_HOT_BLOCKS:
@@ -30,7 +30,7 @@ deploy:
       REEFSWAP_ROUTER_ADDRESS_TESTNET:
         "0x614b7B6382524C32dDF4ff1f4187Bc0BAAC1ed11"
       PUSHER_ENABLED:
-        true
+        false
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:
@@ -49,13 +49,13 @@ deploy:
       SQUID_NAME:
         reef-explorer-testnet
       NOTIFY_NEW_BLOCKS:
-        true
+        false
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
       PUSHER_ENABLED:
-        true
+        false
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:

@@ -4,7 +4,7 @@ import { ERC721Data, TransferData } from "../../interfaces/interfaces";
 import { TransferType, VerifiedContract } from "../../model";
 import * as erc721 from "../../abi/ERC721";
 import { findNativeAddress, toChainContext, toChecksumAddress } from "../../util/util";
-import { ctx, Fields, headReached, pinToIPFSEnabled } from "../../processor";
+import { ctx, Fields, headReached, pinToIPFSEnabled, SUPPORT_HOT_BLOCKS } from "../../processor";
 import { TokenHolderManager } from "../tokenHolderManager";
 import { AccountManager } from "../accountManager";
 import { pinToIPFS } from "../../util/ipfs";
@@ -59,8 +59,10 @@ export const processErc721Transfer = async (
 
     const transferData = {
         id: event.id,
-        blockId: event.block.id,
-        extrinsicId: event.extrinsic!.id,
+        blockHeight: event.block.height,
+        blockHash: event.block.hash,
+        finalized: SUPPORT_HOT_BLOCKS ? false : true,
+        extrinsicIndex: event.extrinsic!.index,
         toAddress: toAddress,
         fromAddress: fromAddress,
         token: token,

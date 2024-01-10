@@ -1,15 +1,11 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_, ManyToOne as ManyToOne_} from "typeorm"
 import * as marshal from "./marshal"
-import {Block} from "./block.model"
-import {Extrinsic} from "./extrinsic.model"
 import {Event} from "./event.model"
 import {Account} from "./account.model"
 import {VerifiedContract} from "./verifiedContract.model"
 import {TransferType} from "./_transferType"
 import {ReefswapAction} from "./_reefswapAction"
 
-@Index_(["id", "extrinsic"], {unique: true})
-@Index_(["id", "event"], {unique: true})
 @Entity_()
 export class Transfer {
     constructor(props?: Partial<Transfer>) {
@@ -20,12 +16,19 @@ export class Transfer {
     id!: string
 
     @Index_()
-    @ManyToOne_(() => Block, {nullable: true})
-    block!: Block
+    @Column_("int4", {nullable: false})
+    blockHeight!: number
 
     @Index_()
-    @ManyToOne_(() => Extrinsic, {nullable: true})
-    extrinsic!: Extrinsic
+    @Column_("text", {nullable: false})
+    blockHash!: string
+
+    @Index_()
+    @Column_("bool", {nullable: false})
+    finalized!: boolean
+
+    @Column_("int4", {nullable: false})
+    extrinsicIndex!: number
 
     @Index_()
     @ManyToOne_(() => Event, {nullable: true})

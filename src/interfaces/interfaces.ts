@@ -84,7 +84,9 @@ export interface ContractData {
 
 export interface EvmEventData {
     id: string;
-    blockId: string;
+    blockHeight: number;
+    blockHash: string;
+    finalized: boolean;
     eventIndex: number;
     extrinsicIndex: number;
     contractAddress: string;
@@ -101,8 +103,10 @@ export interface EvmEventData {
 
 export interface TransferData {
     id: string;
-    blockId: string;
-    extrinsicId: string;
+    blockHeight: number;
+    blockHash: string;
+    finalized: boolean;
+    extrinsicIndex: number;
     toAddress: string;
     fromAddress: string;
     token: VerifiedContract;

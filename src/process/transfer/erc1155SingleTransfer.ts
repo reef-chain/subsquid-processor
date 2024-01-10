@@ -6,7 +6,7 @@ import * as erc1155 from "../../abi/ERC1155";
 import { findNativeAddress, toChainContext, toChecksumAddress } from "../../util/util";
 import { TokenHolderManager } from "../tokenHolderManager";
 import { AccountManager } from "../accountManager";
-import { ctx, Fields, headReached, pinToIPFSEnabled } from "../../processor";
+import { ctx, Fields, headReached, pinToIPFSEnabled, SUPPORT_HOT_BLOCKS } from "../../processor";
 import { pinToIPFS } from "../../util/ipfs";
 
 export const processErc1155SingleTransfer = async (
@@ -58,8 +58,10 @@ export const processErc1155SingleTransfer = async (
 
     const transferData = {
         id: event.id,
-        blockId: event.block.id,
-        extrinsicId: event.extrinsic!.id,
+        blockHeight: event.block.height,
+        blockHash: event.block.hash,
+        finalized: SUPPORT_HOT_BLOCKS ? false : true,
+        extrinsicIndex: event.extrinsic!.index,
         toAddress: toAddress,
         fromAddress: fromAddress,
         token: token,

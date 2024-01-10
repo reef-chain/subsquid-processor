@@ -4,7 +4,7 @@ import { TransferData } from "../../interfaces/interfaces";
 import { TransferType, VerifiedContract } from "../../model";
 import * as erc1155 from "../../abi/ERC1155";
 import { findNativeAddress, toChainContext, toChecksumAddress } from "../../util/util";
-import { ctx, Fields, headReached, pinToIPFSEnabled } from "../../processor";
+import { ctx, Fields, headReached, pinToIPFSEnabled, SUPPORT_HOT_BLOCKS } from "../../processor";
 import { TokenHolderManager } from "../tokenHolderManager";
 import { AccountManager } from "../accountManager";
 import { pinToIPFS } from "../../util/ipfs";
@@ -68,8 +68,10 @@ export const processErc1155BatchTransfer = async (
     for (let i = 0; i < ids.length; i++) {
         transfersData.push({
             id: `${event.id}-${i}`,
-            blockId: event.block.id,
-            extrinsicId: event.extrinsic!.id,
+            blockHeight: event.block.height,
+            blockHash: event.block.hash,
+            finalized: SUPPORT_HOT_BLOCKS ? false : true,
+            extrinsicIndex: event.extrinsic!.index,
             toAddress: toAddress,
             fromAddress: fromAddress,
             token: token,
