@@ -115,7 +115,7 @@ type Transfer @entity {
   blockHash: String! @index
   finalized: Boolean! @index
   extrinsicIndex: Int!
-  event: Event!
+  eventIndex: Int!
   to: Account!
   from: Account!
   token: VerifiedContract!

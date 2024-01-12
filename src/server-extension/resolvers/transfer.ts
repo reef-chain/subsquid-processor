@@ -107,6 +107,7 @@ export class TransferResolver {
         blockHeight: transfer.blockHeight,
         blockHash: transfer.blockHash,
         extrinsicIndex: transfer.extrinsicIndex,
+        eventIndex: Number(transfer.id.split('-')[2]),
         to,
         from,
         token,

@@ -1,6 +1,5 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_, ManyToOne as ManyToOne_} from "typeorm"
 import * as marshal from "./marshal"
-import {Event} from "./event.model"
 import {Account} from "./account.model"
 import {VerifiedContract} from "./verifiedContract.model"
 import {TransferType} from "./_transferType"
@@ -30,9 +29,8 @@ export class Transfer {
     @Column_("int4", {nullable: false})
     extrinsicIndex!: number
 
-    @Index_()
-    @ManyToOne_(() => Event, {nullable: true})
-    event!: Event
+    @Column_("int4", {nullable: false})
+    eventIndex!: number
 
     @Index_()
     @ManyToOne_(() => Account, {nullable: true})

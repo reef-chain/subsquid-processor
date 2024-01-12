@@ -1,6 +1,6 @@
 import { Event } from "@subsquid/substrate-processor";
 import { TransferData } from "../interfaces/interfaces";
-import { Account, Block, ContractType, Event as EventModel, Extrinsic, Transfer, TransferType, VerifiedContract } from "../model";
+import { Account, ContractType, Transfer, TransferType, VerifiedContract } from "../model";
 import { AccountManager } from "./accountManager";
 import { processErc20Transfer } from "../process/transfer/erc20Transfer";
 import { processErc721Transfer } from "../process/transfer/erc721Transfer";
@@ -95,6 +95,7 @@ export class TransferManager {
             transfers.push(
                 new Transfer({
                     ...transferData,
+                    eventIndex: Number(transferData.id.split('-')[2]),
                     to: to,
                     from: from
                 })
