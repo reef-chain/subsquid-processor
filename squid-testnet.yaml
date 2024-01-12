@@ -14,7 +14,7 @@ deploy:
       NETWORK:
         testnet
       HEAD_REACHED:
-        false
+        true
       PIN_TO_IPFS:
         false
       NOTIFY_NEW_BLOCKS:
