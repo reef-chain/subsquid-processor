@@ -14,6 +14,12 @@ export class EvmEventEntity {
   @Field(() => String, { nullable: false })
   blockHash!: string;
 
+  @Field(() => String, { nullable: false })
+  extrinsicId!: string;
+
+  @Field(() => String, { nullable: false })
+  extrinsicHash!: string;
+
   @Field(() => Int, { nullable: false })
   extrinsicIndex!: number;
 
@@ -59,7 +65,8 @@ export class EvmEventResolver {
       SELECT
         ee.id, ee.block_height, ee.block_hash,
         ee.extrinsic_index, ee.data_raw, ee.finalized,
-        ex.timestamp as timestamp, ex.signed_data
+        ex.timestamp as timestamp, ex.signed_data, ex.id as extrinsic_id,
+        ex.hash as extrinsic_hash
       FROM evm_event as ee
       JOIN event as ev
         ON ev.id = ee.id
@@ -72,6 +79,8 @@ export class EvmEventResolver {
       id: evmEvent.id,
       blockHeight: evmEvent.block_height,
       blockHash: evmEvent.block_hash,
+      extrinsicId: evmEvent.extrinsic_id,
+      extrinsicHash: evmEvent.extrinsic_hash,
       extrinsicIndex: evmEvent.extrinsic_index,
       rawData: evmEvent.data_raw,
       timestamp: evmEvent.timestamp,

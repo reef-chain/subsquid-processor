@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: reef-explorer
-version: 9
+version: 10
 description: |-
   Reef Chain explorer data
 
@@ -14,11 +14,11 @@ deploy:
       NETWORK:
         mainnet
       HEAD_REACHED:
-        true
+        false
       PIN_TO_IPFS:
         false
       NOTIFY_NEW_BLOCKS:
-        true
+        false
       USE_ONLY_RPC:
         false
       SUPPORT_HOT_BLOCKS:
@@ -49,7 +49,7 @@ deploy:
       SQUID_NAME:
         reef-explorer
       NOTIFY_NEW_BLOCKS:
-        true
+        false
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:

@@ -26,11 +26,20 @@ export class Transfer {
     @Column_("bool", {nullable: false})
     finalized!: boolean
 
+    @Column_("text", {nullable: true})
+    extrinsicId!: string | undefined | null
+
+    @Column_("text", {nullable: true})
+    extrinsicHash!: string | undefined | null
+
     @Column_("int4", {nullable: false})
     extrinsicIndex!: number
 
     @Column_("int4", {nullable: false})
     eventIndex!: number
+
+    @Column_("jsonb", {nullable: true})
+    signedData!: unknown | undefined | null
 
     @Index_()
     @ManyToOne_(() => Account, {nullable: true})
@@ -61,10 +70,6 @@ export class Transfer {
     @Index_()
     @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
     amount!: bigint
-
-    @Index_()
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    feeAmount!: bigint
 
     @Index_()
     @Column_("text", {nullable: true})

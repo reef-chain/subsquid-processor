@@ -1,7 +1,7 @@
 import { Event } from "@subsquid/substrate-processor";
 import { Store } from "@subsquid/typeorm-store";
 import { AccountManager } from "./accountManager";
-import { ABIS, EvmEventData } from "../interfaces/interfaces";
+import { ABIS, EvmEventData, SignedData } from "../interfaces/interfaces";
 import { EvmEvent, EvmEventStatus, EvmEventType, VerifiedContract } from "../model";
 import { toChecksumAddress } from "../util/util";
 import { TransferManager } from "./transferManager";
@@ -13,7 +13,7 @@ export class EvmEventManager {
   
     async process(
         event: Event<Fields>, 
-        feeAmount: bigint,
+        signedData: SignedData | null,
         transferManager: TransferManager,
         accountManager: AccountManager,
         store?: Store
@@ -40,7 +40,7 @@ export class EvmEventManager {
                 const data = event.args.data;
                 dataParsed = iface.parseLog({ topics, data });
                 type = EvmEventType.Verified;
-                await transferManager.process(event, accountManager, contract, feeAmount);
+                await transferManager.process(event, accountManager, contract, signedData);
             }
         } else if (method === 'ExecutedFailed') {
             status = EvmEventStatus.Error;

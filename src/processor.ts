@@ -170,18 +170,18 @@ processor.run(database, async (ctx_) => {
 
     for (const event of block.events) {
       if (event.phase === "ApplyExtrinsic") {
-        const feeAmount = await extrinsicManager.process(event);
+        const signedData = await extrinsicManager.process(event);
         eventManager.process(event);
 
         switch (event.name) {
           case 'EVM.Log':
-            await evmEventManager.process(event, feeAmount, transferManager, accountManager, ctx.store);
+            await evmEventManager.process(event, signedData, transferManager, accountManager, ctx.store);
             break;
           case 'EVM.Created':
             await contractManager.process(event);
             break;
           case 'EVM.ExecutedFailed':
-            await evmEventManager.process(event, feeAmount, transferManager, accountManager);
+            await evmEventManager.process(event, signedData, transferManager, accountManager);
             break;
 
           case 'EvmAccounts.ClaimAccount':
@@ -198,7 +198,7 @@ processor.run(database, async (ctx_) => {
             await accountManager.process(addressReserved, block.header);
             break;
           case 'Balances.Transfer':
-            await transferManager.process(event, accountManager, reefVerifiedContract, feeAmount, true);
+            await transferManager.process(event, accountManager, reefVerifiedContract, signedData, true);
             break;
 
           case 'Staking.Rewarded':

@@ -114,8 +114,11 @@ type Transfer @entity {
   blockHeight: Int! @index
   blockHash: String! @index
   finalized: Boolean! @index
+  extrinsicId: String
+  extrinsicHash: String
   extrinsicIndex: Int!
   eventIndex: Int!
+  signedData: JSON
   to: Account!
   from: Account!
   token: VerifiedContract!
@@ -124,7 +127,6 @@ type Transfer @entity {
   type: TransferType!
   reefswapAction: ReefswapAction
   amount: BigInt! @index
-  feeAmount: BigInt! @index
   denom: String @index
   nftId: BigInt @index
   errorMessage: String

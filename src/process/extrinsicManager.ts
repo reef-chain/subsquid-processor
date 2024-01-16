@@ -1,5 +1,5 @@
 import { BlockHeader, Event } from "@subsquid/substrate-processor";
-import { ExtrinsicData } from "../interfaces/interfaces";
+import { ExtrinsicData, SignedData } from "../interfaces/interfaces";
 import { Block, Extrinsic, ExtrinsicStatus, ExtrinsicType } from "../model";
 import { Fields, ctx } from "../processor";
 import { getFeeDetails, getPaymentInfo } from "../util/extrinsic";
@@ -15,8 +15,8 @@ type SystemEvent_ExtrinsicSuccess = ExtrinsicSuccessV5 | ExtrinsicSuccessV8 | Ex
 export class ExtrinsicManager {  
     extrinsicsData: Map<string, ExtrinsicData> = new Map();
   
-    async process(event: Event<Fields>): Promise<bigint> {
-        if (this.extrinsicsData.has(event.extrinsic!.id)) return BigInt(0);
+    async process(event: Event<Fields>): Promise<SignedData | null> {
+        if (this.extrinsicsData.has(event.extrinsic!.id)) return null;
 
         let signer = "";
         let signedData = null;
@@ -56,7 +56,7 @@ export class ExtrinsicManager {
 
         this.extrinsicsData.set(extrinsicData.id, extrinsicData);
 
-        return extrinsicData.signedData?.fee.partialFee || BigInt(0);
+        return extrinsicData.signedData || null;
     }
   
     async save(blocks: Map<string, Block>): Promise<Map<string, Extrinsic>> {

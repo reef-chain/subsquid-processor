@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: reef-explorer-testnet
-version: 9
+version: 10
 description: |-
   Reef Chain testnet explorer data
 
@@ -14,7 +14,7 @@ deploy:
       NETWORK:
         testnet
       HEAD_REACHED:
-        true
+        false
       PIN_TO_IPFS:
         false
       NOTIFY_NEW_BLOCKS:

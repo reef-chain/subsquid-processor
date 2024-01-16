@@ -106,7 +106,10 @@ export interface TransferData {
     blockHeight: number;
     blockHash: string;
     finalized: boolean;
+    extrinsicId: string
+    extrinsicHash: string
     extrinsicIndex: number;
+    signedData: SignedData | unknown | undefined | null;
     toAddress: string;
     fromAddress: string;
     token: VerifiedContract;
@@ -120,7 +123,6 @@ export interface TransferData {
     denom: string | undefined | null;
     nftId: bigint | undefined | null;
     errorMessage: string | undefined | null;
-    feeAmount: bigint;
 };
 
 export interface TokenHolderData {

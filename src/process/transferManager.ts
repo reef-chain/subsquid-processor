@@ -1,5 +1,5 @@
 import { Event } from "@subsquid/substrate-processor";
-import { TransferData } from "../interfaces/interfaces";
+import { SignedData, TransferData } from "../interfaces/interfaces";
 import { Account, ContractType, Transfer, TransferType, VerifiedContract } from "../model";
 import { AccountManager } from "./accountManager";
 import { processErc20Transfer } from "../process/transfer/erc20Transfer";
@@ -27,11 +27,11 @@ export class TransferManager {
         event: Event<Fields>, 
         accountManager: AccountManager,
         contract: VerifiedContract,
-        feeAmount: bigint,
+        signedData: SignedData | null,
         isNative: boolean = false
     ) {
         if (isNative) {
-            this.transfersData.push(await processNativeTransfer(event, contract, feeAmount, accountManager));
+            this.transfersData.push(await processNativeTransfer(event, contract, signedData, accountManager));
             return;
         }
 
@@ -46,21 +46,21 @@ export class TransferManager {
                     if (lastNativeIndex === -1 || value.toString() !== this.transfersData[lastNativeIndex].amount.toString()) break;
                     this.transfersData[lastNativeIndex].reefswapAction = extractReefswapRouterData(event, REEF_CONTRACT_ADDRESS);
                 } else {
-                    const erc20Transfer = await processErc20Transfer(event, contract, feeAmount, accountManager, this.tokenHolderManager);
+                    const erc20Transfer = await processErc20Transfer(event, contract, signedData, accountManager, this.tokenHolderManager);
                     if (erc20Transfer) this.transfersData.push(erc20Transfer);
                 }
                 break;
             case erc721.events.Transfer.topic:
                 if (contract.type !== ContractType.ERC721) break;
-                this.transfersData.push(await processErc721Transfer(event, contract, feeAmount, accountManager, this.tokenHolderManager));
+                this.transfersData.push(await processErc721Transfer(event, contract, signedData, accountManager, this.tokenHolderManager));
                 break;
             case erc1155.events.TransferSingle.topic:
                 if (contract.type !== ContractType.ERC1155) break;
-                this.transfersData.push(await processErc1155SingleTransfer(event, contract, feeAmount, accountManager, this.tokenHolderManager));
+                this.transfersData.push(await processErc1155SingleTransfer(event, contract, signedData, accountManager, this.tokenHolderManager));
                 break;
             case erc1155.events.TransferBatch.topic:
                 if (contract.type !== ContractType.ERC1155) break;
-                this.transfersData.push(...await processErc1155BatchTransfer(event, contract, feeAmount, accountManager, this.tokenHolderManager));
+                this.transfersData.push(...await processErc1155BatchTransfer(event, contract, signedData, accountManager, this.tokenHolderManager));
                 break;
         }
     }

@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { Event } from "@subsquid/substrate-processor";
-import { ERC721Data, TransferData } from "../../interfaces/interfaces";
+import { ERC721Data, SignedData, TransferData } from "../../interfaces/interfaces";
 import { TransferType, VerifiedContract } from "../../model";
 import * as erc721 from "../../abi/ERC721";
 import { findNativeAddress, toChainContext, toChecksumAddress } from "../../util/util";
@@ -12,7 +12,7 @@ import { pinToIPFS } from "../../util/ipfs";
 export const processErc721Transfer = async (
     event: Event<Fields>,
     token: VerifiedContract,
-    feeAmount: bigint,
+    signedData: SignedData | null,
     accountManager: AccountManager,
     tokenHolderManager: TokenHolderManager
 ): Promise<TransferData> => {
@@ -62,7 +62,10 @@ export const processErc721Transfer = async (
         blockHeight: event.block.height,
         blockHash: event.block.hash,
         finalized: SUPPORT_HOT_BLOCKS ? false : true,
+        extrinsicId: event.extrinsic!.id,
+        extrinsicHash: event.extrinsic!.hash,
         extrinsicIndex: event.extrinsic!.index,
+        signedData,
         toAddress: toAddress,
         fromAddress: fromAddress,
         token: token,
@@ -75,8 +78,7 @@ export const processErc721Transfer = async (
         timestamp: new Date(event.block.timestamp!),
         denom: (token.contractData as ERC721Data).symbol,
         nftId: BigInt(tokenId.toString()),
-        errorMessage: '',
-        feeAmount: feeAmount
+        errorMessage: ''
     };
 
     return transferData;
