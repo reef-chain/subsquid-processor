@@ -1,4 +1,4 @@
-import { BigInteger, Json } from '@subsquid/graphql-server';
+import { BigInteger } from '@subsquid/graphql-server';
 import { Arg, Field, InputType, Int, Mutation, Resolver } from 'type-graphql'
 import { EntityManager, In } from 'typeorm'
 import { Account, Transfer, TransferType, VerifiedContract } from '../../model';
@@ -23,8 +23,8 @@ export class TransferInput {
   @Field(() => Int, { nullable: true })
   extrinsicIndex!: number;
 
-  @Field(() => Json, { nullable: true })
-  signedData!: JSON;
+  @Field(() => String, { nullable: true })
+  signedData!: string;
 
   @Field(() => String, { nullable: true })
   toId!: string;
@@ -46,9 +46,6 @@ export class TransferInput {
 
   @Field(() => BigInteger, { nullable: false })
   amount!: bigint;
-
-  @Field(() => BigInteger, { nullable: false })
-  feeAmount!: bigint;
 
   @Field(() => String, { nullable: true })
   denom!: string;
@@ -118,7 +115,7 @@ export class TransferResolver {
         extrinsicId: transfer.extrinsicId,
         extrinsicIndex: transfer.extrinsicIndex,
         extrinsicHash: transfer.extrinsicHash,
-        signedData: transfer.signedData,
+        signedData: JSON.parse(transfer.signedData),
         eventIndex: Number(transfer.id.split('-')[2]),
         to,
         from,
