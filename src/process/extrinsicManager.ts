@@ -16,7 +16,9 @@ export class ExtrinsicManager {
     extrinsicsData: Map<string, ExtrinsicData> = new Map();
   
     async process(event: Event<Fields>): Promise<SignedData | null> {
-        if (this.extrinsicsData.has(event.extrinsic!.id)) return null;
+        if (this.extrinsicsData.has(event.extrinsic!.id)) {
+            return this.extrinsicsData.get(event.extrinsic!.id)!.signedData as SignedData || null;
+        }
 
         let signer = "";
         let signedData = null;
