@@ -133,14 +133,14 @@ export class AccountManager {
         // Update transfers in DB
         const transfersTo = await ctx.store.find(Transfer, {
             where: { toEvmAddress: evmAddress },
-            relations: { token: true, block: true, from: true, to: true }
+            relations: { token: true, from: true, to: true }
         });
         transfersTo.forEach(transfer => transfer.to = account);
         await ctx.store.save(transfersTo);
     
         const transfersFrom = await ctx.store.find(Transfer, {
             where: { fromEvmAddress: evmAddress },
-            relations: { token: true, block: true, from: true, to: true }
+            relations: { token: true, from: true, to: true }
         });
         transfersFrom.forEach(transfer => transfer.from = account);
         await ctx.store.save(transfersFrom);
@@ -203,7 +203,7 @@ export class AccountManager {
         // Update transfers in DB
         const transfersTo = await ctx.store.find(Transfer, {
             where: { to: { id: nativeAddress } },
-            relations: { token: true, block: true, from: true, to: true }
+            relations: { token: true, from: true, to: true }
         });
         transfersTo.forEach(transfer => {
             if (transfer.token.id === REEF_CONTRACT_ADDRESS && transfer.toEvmAddress !== "") {
@@ -216,7 +216,7 @@ export class AccountManager {
     
         const transfersFrom = await ctx.store.find(Transfer, {
             where: { from: { id: nativeAddress } },
-            relations: { token: true, block: true, from: true, to: true }
+            relations: { token: true, from: true, to: true }
         });
         transfersFrom.forEach(transfer => {
             if (transfer.token.id === REEF_CONTRACT_ADDRESS && transfer.toEvmAddress !== "") {

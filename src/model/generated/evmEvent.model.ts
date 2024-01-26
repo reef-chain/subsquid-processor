@@ -1,6 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_} from "typeorm"
-import {Event} from "./event.model"
-import {Block} from "./block.model"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_} from "typeorm"
 import {EvmEventType} from "./_evmEventType"
 import {EvmEventStatus} from "./_evmEventStatus"
 
@@ -11,18 +9,22 @@ export class EvmEvent {
     }
 
     /**
-     * 000000..00<blockNum>-000<index>-<shorthash>
+     * 000000..00<blockNum>-<shorthash>-000<index>
      */
     @PrimaryColumn_()
     id!: string
 
     @Index_()
-    @ManyToOne_(() => Event, {nullable: true})
-    event!: Event
+    @Column_("int4", {nullable: false})
+    blockHeight!: number
 
     @Index_()
-    @ManyToOne_(() => Block, {nullable: true})
-    block!: Block
+    @Column_("text", {nullable: false})
+    blockHash!: string
+
+    @Index_()
+    @Column_("bool", {nullable: false})
+    finalized!: boolean
 
     @Column_("int4", {nullable: false})
     eventIndex!: number

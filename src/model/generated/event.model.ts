@@ -12,7 +12,7 @@ export class Event {
     }
 
     /**
-     * 000000..00<blockNum>-000<index>-<shorthash>
+     * 000000..00<blockNum>-<shorthash>-000<index>
      */
     @PrimaryColumn_()
     id!: string

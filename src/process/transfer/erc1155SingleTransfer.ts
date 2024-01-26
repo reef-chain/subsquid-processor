@@ -1,18 +1,18 @@
 import { ethers } from "ethers";
 import { Event } from "@subsquid/substrate-processor";
-import { TransferData } from "../../interfaces/interfaces";
+import { SignedData, TransferData } from "../../interfaces/interfaces";
 import { TransferType, VerifiedContract } from "../../model";
 import * as erc1155 from "../../abi/ERC1155";
 import { findNativeAddress, toChainContext, toChecksumAddress } from "../../util/util";
 import { TokenHolderManager } from "../tokenHolderManager";
 import { AccountManager } from "../accountManager";
-import { ctx, Fields, headReached, pinToIPFSEnabled } from "../../processor";
+import { ctx, Fields, headReached, pinToIPFSEnabled, SUPPORT_HOT_BLOCKS } from "../../processor";
 import { pinToIPFS } from "../../util/ipfs";
 
 export const processErc1155SingleTransfer = async (
     event: Event<Fields>,
     token: VerifiedContract,
-    feeAmount: bigint,
+    signedData: SignedData | null,
     accountManager: AccountManager,
     tokenHolderManager: TokenHolderManager
 ): Promise<TransferData> => {    
@@ -58,8 +58,13 @@ export const processErc1155SingleTransfer = async (
 
     const transferData = {
         id: event.id,
-        blockId: event.block.id,
+        blockHeight: event.block.height,
+        blockHash: event.block.hash,
+        finalized: SUPPORT_HOT_BLOCKS ? false : true,
         extrinsicId: event.extrinsic!.id,
+        extrinsicHash: event.extrinsic!.hash,
+        extrinsicIndex: event.extrinsic!.index,
+        signedData,
         toAddress: toAddress,
         fromAddress: fromAddress,
         token: token,
@@ -72,8 +77,7 @@ export const processErc1155SingleTransfer = async (
         timestamp: new Date(event.block.timestamp!),
         denom: null,
         nftId: BigInt(id.toString()),
-        errorMessage: '',
-        feeAmount: feeAmount
+        errorMessage: ''
     };
 
     return transferData;

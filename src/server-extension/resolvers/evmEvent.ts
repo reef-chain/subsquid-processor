@@ -8,38 +8,32 @@ export class EvmEventEntity {
   @Field(() => String, { nullable: false })
   id!: string;
 
-  @Field(() => String, { nullable: true })
-  blockid!: string;
-
-  @Field(() => String, { nullable: true })
-  extrinsicid!: string;
-
   @Field(() => Int, { nullable: false })
-  eventindex!: number;
-
-  @Field(() => Int, { nullable: false })
-  extrinsicindex!: number;
+  blockHeight!: number;
 
   @Field(() => String, { nullable: false })
-  contractaddress!: string;
+  blockHash!: string;
+
+  @Field(() => String, { nullable: false })
+  extrinsicId!: string;
+
+  @Field(() => String, { nullable: false })
+  extrinsicHash!: string;
+
+  @Field(() => Int, { nullable: false })
+  extrinsicIndex!: number;
 
   @Field(() => Json, { nullable: false })
-  rawdata!: JSON;
-
-  @Field(() => String, { nullable: false })
-  method!: string;
-
-  @Field(() => String, { nullable: false })
-  type!: string;
-
-  @Field(() => String, { nullable: false })
-  status!: string;
+  rawData!: JSON;
 
   @Field(() => DateTime, { nullable: false })
   timestamp!: Date;
 
   @Field(() => Json, { nullable: true })
-  signeddata!: JSON;
+  signedData!: JSON;
+
+  @Field(() => Boolean, { nullable: false })
+  finalized!: boolean;
 
   constructor(props: Partial<EvmEventEntity>) {
     Object.assign(this, props);
@@ -69,9 +63,10 @@ export class EvmEventResolver {
     const repository = manager.getRepository(EvmEventEntity);
     const query = `
       SELECT
-        ee.id, ee.block_id as blockId, ev.extrinsic_id as extrinsicId, ee.event_index as eventIndex, 
-        ee.extrinsic_index as extrinsicIndex, ee.contract_address as contractAddress, ee.data_raw as rawData, 
-        ee.method, ee.type, ee.status, ex.timestamp as timestamp, ex.signed_data as signedData
+        ee.id, ee.block_height, ee.block_hash,
+        ee.extrinsic_index, ee.data_raw, ee.finalized,
+        ex.timestamp as timestamp, ex.signed_data, ex.id as extrinsic_id,
+        ex.hash as extrinsic_hash
       FROM evm_event as ee
       JOIN event as ev
         ON ev.id = ee.id
@@ -80,7 +75,18 @@ export class EvmEventResolver {
       WHERE ee.contract_address = $1 AND ee.type = 'Unverified';
     `;
     const result = await repository.query(query, [id]);
-    return result;
+    return result.map((evmEvent: any) => new EvmEventEntity({
+      id: evmEvent.id,
+      blockHeight: evmEvent.block_height,
+      blockHash: evmEvent.block_hash,
+      extrinsicId: evmEvent.extrinsic_id,
+      extrinsicHash: evmEvent.extrinsic_hash,
+      extrinsicIndex: evmEvent.extrinsic_index,
+      rawData: evmEvent.data_raw,
+      timestamp: evmEvent.timestamp,
+      signedData: evmEvent.signed_data,
+      finalized: evmEvent.finalized,
+    }));
   }
   
   @Mutation(() => Boolean) async updateEvmEventsDataParsed(
