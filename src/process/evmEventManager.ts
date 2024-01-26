@@ -1,19 +1,19 @@
 import { Event } from "@subsquid/substrate-processor";
 import { Store } from "@subsquid/typeorm-store";
 import { AccountManager } from "./accountManager";
-import { ABIS, EvmEventData } from "../interfaces/interfaces";
-import { Block, Event as EventModel, EvmEvent, EvmEventStatus, EvmEventType, VerifiedContract } from "../model";
+import { ABIS, EvmEventData, SignedData } from "../interfaces/interfaces";
+import { EvmEvent, EvmEventStatus, EvmEventType, VerifiedContract } from "../model";
 import { toChecksumAddress } from "../util/util";
 import { TransferManager } from "./transferManager";
 import { ethers } from "ethers";
-import { ctx, Fields } from "../processor";
+import { ctx, Fields, SUPPORT_HOT_BLOCKS } from "../processor";
 
 export class EvmEventManager {  
     evmEventsData: EvmEventData[] = [];
   
     async process(
         event: Event<Fields>, 
-        feeAmount: bigint,
+        signedData: SignedData | null,
         transferManager: TransferManager,
         accountManager: AccountManager,
         store?: Store
@@ -40,7 +40,7 @@ export class EvmEventManager {
                 const data = event.args.data;
                 dataParsed = iface.parseLog({ topics, data });
                 type = EvmEventType.Verified;
-                await transferManager.process(event, accountManager, contract, feeAmount);
+                await transferManager.process(event, accountManager, contract, signedData);
             }
         } else if (method === 'ExecutedFailed') {
             status = EvmEventStatus.Error;
@@ -60,7 +60,9 @@ export class EvmEventManager {
 
         const evmEventData = {
             id: event.id,
-            blockId: event.block.id,
+            blockHeight: event.block.height,
+            blockHash: event.block.hash,
+            finalized: SUPPORT_HOT_BLOCKS ? false : true,
             eventIndex: event.index,
             extrinsicIndex: event.extrinsic!.index,
             contractAddress: contractAddress,
@@ -78,26 +80,10 @@ export class EvmEventManager {
         this.evmEventsData.push(evmEventData);
     }
   
-    async save(blocks: Map<string, Block>, events: Map<string, EventModel>) {
-        const evmLogEvents: EvmEvent[] = this.evmEventsData.map(evmLogEventData => {
-            const block = blocks.get(evmLogEventData.blockId);
-            if (!block) {
-                ctx.log.error(`ERROR saving evm event: Block ${evmLogEventData.blockId} not found`);
-            }
-    
-            const event = events.get(evmLogEventData.id);
-            if (!event) {
-                ctx.log.error(`ERROR saving evm event: Event ${evmLogEventData.id} not found`);
-            }
-            
-            return new EvmEvent({
-                ...evmLogEventData,
-                block: block,
-                event: event
-            });
+    async save() {
+        const evmLogEvents: EvmEvent[] = this.evmEventsData.map(evmLogEventData => {            
+            return new EvmEvent(evmLogEventData);
         })
-        .filter(e => e.block && e.event);
-    
         await ctx.store.insert(evmLogEvents);
     }
 }

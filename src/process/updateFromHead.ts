@@ -177,7 +177,8 @@ const updateErc1155Balances = async (blockHeader: BlockHeader<Fields>, tokenHold
 
 // Queries storage and updates database once head block has been reached
 export const updateFromHead = async (blockHeader: BlockHeader<Fields>) => {
-    const BATCH_SIZE = process.env.BATCH_SIZE ? parseInt(process.env.BATCH_SIZE) : 100;
+    const BATCH_SIZE = process.env.UPDATE_FROM_HEAD_BATCH_SIZE 
+        ? parseInt(process.env.UPDATE_FROM_HEAD_BATCH_SIZE) : 100;
     const WAIT_TIME = process.env.WAIT_TIME ? parseInt(process.env.WAIT_TIME) : 0;
 
     ctx.log.info(`Updating accounts and token holders from head block ${blockHeader.height}`);

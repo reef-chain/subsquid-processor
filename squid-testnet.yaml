@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: reef-explorer-testnet
-version: 6
+version: 10
 description: |-
   Reef Chain testnet explorer data
 
@@ -23,6 +23,10 @@ deploy:
         true
       SUPPORT_HOT_BLOCKS:
         true
+      UPDATE_FROM_HEAD_BATCH_SIZE:
+        100
+      PROCESSOR_BATCH_SIZE:
+        1000
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:

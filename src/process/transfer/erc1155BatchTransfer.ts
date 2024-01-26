@@ -1,10 +1,10 @@
 import { ethers } from "ethers";
 import { Event } from "@subsquid/substrate-processor";
-import { TransferData } from "../../interfaces/interfaces";
+import { SignedData, TransferData } from "../../interfaces/interfaces";
 import { TransferType, VerifiedContract } from "../../model";
 import * as erc1155 from "../../abi/ERC1155";
 import { findNativeAddress, toChainContext, toChecksumAddress } from "../../util/util";
-import { ctx, Fields, headReached, pinToIPFSEnabled } from "../../processor";
+import { ctx, Fields, headReached, pinToIPFSEnabled, SUPPORT_HOT_BLOCKS } from "../../processor";
 import { TokenHolderManager } from "../tokenHolderManager";
 import { AccountManager } from "../accountManager";
 import { pinToIPFS } from "../../util/ipfs";
@@ -12,7 +12,7 @@ import { pinToIPFS } from "../../util/ipfs";
 export const processErc1155BatchTransfer = async (
     event: Event<Fields>,
     token: VerifiedContract,
-    feeAmount: bigint,
+    signedData: SignedData | null,
     accountManager: AccountManager,
     tokenHolderManager: TokenHolderManager
 ): Promise<TransferData[]> => {    
@@ -68,8 +68,13 @@ export const processErc1155BatchTransfer = async (
     for (let i = 0; i < ids.length; i++) {
         transfersData.push({
             id: `${event.id}-${i}`,
-            blockId: event.block.id,
+            blockHeight: event.block.height,
+            blockHash: event.block.hash,
+            finalized: SUPPORT_HOT_BLOCKS ? false : true,
             extrinsicId: event.extrinsic!.id,
+            extrinsicHash: event.extrinsic!.hash,
+            extrinsicIndex: event.extrinsic!.index,
+            signedData,
             toAddress: toAddress,
             fromAddress: fromAddress,
             token: token,
@@ -82,8 +87,7 @@ export const processErc1155BatchTransfer = async (
             timestamp: new Date(event.block.timestamp!),
             denom: null,
             nftId: BigInt(ids[i].toString()),
-            errorMessage: '',
-            feeAmount: feeAmount
+            errorMessage: ''
         });
     }
 

@@ -1,6 +1,6 @@
 import { Event } from "@subsquid/substrate-processor";
-import { TransferData } from "../interfaces/interfaces";
-import { Account, Block, ContractType, Event as EventModel, Extrinsic, Transfer, TransferType, VerifiedContract } from "../model";
+import { SignedData, TransferData } from "../interfaces/interfaces";
+import { Account, ContractType, Transfer, TransferType, VerifiedContract } from "../model";
 import { AccountManager } from "./accountManager";
 import { processErc20Transfer } from "../process/transfer/erc20Transfer";
 import { processErc721Transfer } from "../process/transfer/erc721Transfer";
@@ -27,11 +27,11 @@ export class TransferManager {
         event: Event<Fields>, 
         accountManager: AccountManager,
         contract: VerifiedContract,
-        feeAmount: bigint,
+        signedData: SignedData | null,
         isNative: boolean = false
     ) {
         if (isNative) {
-            this.transfersData.push(await processNativeTransfer(event, contract, feeAmount, accountManager));
+            this.transfersData.push(await processNativeTransfer(event, contract, signedData, accountManager));
             return;
         }
 
@@ -46,53 +46,30 @@ export class TransferManager {
                     if (lastNativeIndex === -1 || value.toString() !== this.transfersData[lastNativeIndex].amount.toString()) break;
                     this.transfersData[lastNativeIndex].reefswapAction = extractReefswapRouterData(event, REEF_CONTRACT_ADDRESS);
                 } else {
-                    const erc20Transfer = await processErc20Transfer(event, contract, feeAmount, accountManager, this.tokenHolderManager);
+                    const erc20Transfer = await processErc20Transfer(event, contract, signedData, accountManager, this.tokenHolderManager);
                     if (erc20Transfer) this.transfersData.push(erc20Transfer);
                 }
                 break;
             case erc721.events.Transfer.topic:
                 if (contract.type !== ContractType.ERC721) break;
-                this.transfersData.push(await processErc721Transfer(event, contract, feeAmount, accountManager, this.tokenHolderManager));
+                this.transfersData.push(await processErc721Transfer(event, contract, signedData, accountManager, this.tokenHolderManager));
                 break;
             case erc1155.events.TransferSingle.topic:
                 if (contract.type !== ContractType.ERC1155) break;
-                this.transfersData.push(await processErc1155SingleTransfer(event, contract, feeAmount, accountManager, this.tokenHolderManager));
+                this.transfersData.push(await processErc1155SingleTransfer(event, contract, signedData, accountManager, this.tokenHolderManager));
                 break;
             case erc1155.events.TransferBatch.topic:
                 if (contract.type !== ContractType.ERC1155) break;
-                this.transfersData.push(...await processErc1155BatchTransfer(event, contract, feeAmount, accountManager, this.tokenHolderManager));
+                this.transfersData.push(...await processErc1155BatchTransfer(event, contract, signedData, accountManager, this.tokenHolderManager));
                 break;
         }
     }
   
-    async save(
-        blocks: Map<string, Block>, 
-        extrinsics: Map<string, Extrinsic>,
-        accounts: Map<string, Account>,
-        events: Map<string, EventModel>
-    ) {
+    async save(accounts: Map<string, Account>) {
         const transfers: Transfer[] = [];
 
         // TODO: process in parallel
-        for (const transferData of this.transfersData) {
-            const block = blocks.get(transferData.blockId);
-            if (!block) {
-                ctx.log.error(`ERROR saving transfer: Block ${transferData.blockId} not found`);
-                continue;
-            } 
-
-            const extrinsic = extrinsics.get(transferData.extrinsicId);
-            if (!extrinsic) {
-                ctx.log.error(`ERROR saving transfer: Extrinsic ${transferData.extrinsicId} not found`);
-                continue;
-            }
-
-            const event = events.get(transferData.id);
-            if (!event) {
-                ctx.log.error(`ERROR saving transfer: Event ${transferData.id} not found`);
-                continue;
-            }
-            
+        for (const transferData of this.transfersData) {            
             // Search to account in cached accounts
             let to = accounts.get(transferData.toAddress);
             if (!to) {
@@ -118,9 +95,7 @@ export class TransferManager {
             transfers.push(
                 new Transfer({
                     ...transferData,
-                    block: block,
-                    extrinsic: extrinsic,
-                    event: event,
+                    eventIndex: Number(transferData.id.split('-')[2]),
                     to: to,
                     from: from
                 })
