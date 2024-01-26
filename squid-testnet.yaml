@@ -14,15 +14,19 @@ deploy:
       NETWORK:
         testnet
       HEAD_REACHED:
-        false
+        true
       PIN_TO_IPFS:
-        false
+        true
       NOTIFY_NEW_BLOCKS:
-        false
+        true
       USE_ONLY_RPC:
         true
       SUPPORT_HOT_BLOCKS:
         true
+      UPDATE_FROM_HEAD_BATCH_SIZE:
+        100
+      PROCESSOR_BATCH_SIZE:
+        1000
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:
@@ -30,7 +34,7 @@ deploy:
       REEFSWAP_ROUTER_ADDRESS_TESTNET:
         "0x614b7B6382524C32dDF4ff1f4187Bc0BAAC1ed11"
       PUSHER_ENABLED:
-        false
+        true
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:
@@ -49,13 +53,13 @@ deploy:
       SQUID_NAME:
         reef-explorer-testnet
       NOTIFY_NEW_BLOCKS:
-        false
+        true
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
       PUSHER_ENABLED:
-        false
+        true
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:

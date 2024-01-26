@@ -23,6 +23,10 @@ deploy:
         false
       SUPPORT_HOT_BLOCKS:
         true
+      UPDATE_FROM_HEAD_BATCH_SIZE:
+        100
+      PROCESSOR_BATCH_SIZE:
+        1000
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:
@@ -87,3 +91,6 @@ scale:
   addons:
     postgres:
       storage: 100Gi
+      profile: medium
+  processor:
+    profile: medium
