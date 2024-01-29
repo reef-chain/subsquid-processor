@@ -17,8 +17,6 @@ deploy:
         true
       PIN_TO_IPFS:
         true
-      NOTIFY_NEW_BLOCKS:
-        true
       USE_ONLY_RPC:
         true
       SUPPORT_HOT_BLOCKS:
@@ -27,12 +25,18 @@ deploy:
         100
       PROCESSOR_BATCH_SIZE:
         1000
+      REEFSWAP_ROUTER_ADDRESS_TESTNET:
+        "0x614b7B6382524C32dDF4ff1f4187Bc0BAAC1ed11"
+      FIREBASE_EMITTER_ENABLED:
+        true
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
-      REEFSWAP_ROUTER_ADDRESS_TESTNET:
-        "0x614b7B6382524C32dDF4ff1f4187Bc0BAAC1ed11"
+      EMITTER_IO_ENABLED:
+        true
+      EMITTER_IO_URL:
+        http://events.reefscan.info:8080
       PUSHER_ENABLED:
         true
       PUSHER_APP_ID:
@@ -52,12 +56,16 @@ deploy:
         testnet
       SQUID_NAME:
         reef-explorer-testnet
-      NOTIFY_NEW_BLOCKS:
+      FIREBASE_EMITTER_ENABLED:
         true
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
+      EMITTER_IO_ENABLED:
+        true
+      EMITTER_IO_URL:
+        http://events.reefscan.info:8080
       PUSHER_ENABLED:
         true
       PUSHER_APP_ID:
@@ -85,6 +93,7 @@ deploy:
     - PUSHER_SECRET
     - FIREBASE_CLIENT_EMAIL
     - FIREBASE_PK
+    - EMITTER_IO_KEY
 
 scale:
   dedicated: false

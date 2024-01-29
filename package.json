@@ -24,6 +24,7 @@
     "graphql-type-json": "^0.3.2",
     "ipfs-http-client": "56.0.2",
     "jsonwebtoken": "^9.0.0",
+    "mqtt": "^5.3.5",
     "pg": "^8.7.3",
     "pusher": "^5.2.0",
     "type-graphql": "^1.2.0-rc.1",

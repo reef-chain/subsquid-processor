@@ -14,25 +14,9 @@ import { StakingManager } from "./process/stakingManager";
 import { updateFromHead } from "./process/updateFromHead";
 import { hexToNativeAddress, REEF_CONTRACT_ADDRESS } from "./util/util";
 import { Account, Extrinsic, VerifiedContract } from "./model";
-import { FirebaseDB } from "./firebase/firebase";
-
-// TODO: remove pusher
-import Pusher from "pusher";
-let pusher: Pusher;
-const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
-const PUSHER_EVENT = process.env.PUSHER_EVENT;
-if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
-  pusher = new Pusher({
-    appId: process.env.PUSHER_APP_ID!,
-    key: process.env.PUSHER_KEY!,
-    secret: process.env.PUSHER_SECRET!,
-    cluster: process.env.PUSHER_CLUSTER || "eu",
-    useTLS: true
-  });
-  console.log('    Pusher enabled: true');
-} else {
-  console.log('    Pusher enabled: false');
-}
+import { FirebaseDB } from "./emitter/firebase";
+import { Pusher } from "./emitter/pusher";
+import { EmitterIO } from "./emitter/emitter-io";
 
 const network = process.env.NETWORK;
 if (!network) {
@@ -105,8 +89,14 @@ console.log(`    Pin to IPFS: ${pinToIPFSEnabled}`);
 let isFirstBatch = true;
 let newBlockData: NewBlockData;
 
-const firebaseDB = process.env.NOTIFY_NEW_BLOCKS === 'true' ? new FirebaseDB() : null;
-console.log(`    Notify new blocks: ${!!firebaseDB}`);
+const firebaseDB = process.env.FIREBASE_EMITTER_ENABLED === 'true' ? new FirebaseDB() : null;
+console.log(`    FirebaseDB emitter enabled: ${!!firebaseDB}`);
+
+const emitterIO = process.env.EMITTER_IO_ENABLED === 'true' ? new EmitterIO() : null;
+console.log(`    EmitterIO emitter enabled: ${!!emitterIO}`);
+
+const pusher = process.env.PUSHER_ENABLED === 'true' ? new Pusher() : null;
+console.log(`    Pusher enabled: ${!!pusher}`);
 
 processor.run(database, async (ctx_) => {
   ctx = ctx_;
@@ -118,12 +108,10 @@ processor.run(database, async (ctx_) => {
 
 const processBatch = async (batch: Block<Fields>[]) => {
   // Push data from previous batch
-  if (firebaseDB && newBlockData) {
-    firebaseDB.notifyBlock(newBlockData);
-  }
-  // TODO: remove pusher
-  if (pusher && newBlockData) {
-    pushMessage(newBlockData);
+  if (newBlockData) {
+    if (firebaseDB) firebaseDB.notifyBlock(newBlockData);
+    if (emitterIO) emitterIO.notifyBlock(newBlockData);
+    if (pusher) pusher.notifyBlock(newBlockData);
   }
 
   // Initialize global variables in first batch
@@ -235,7 +223,7 @@ const processBatch = async (batch: Block<Fields>[]) => {
   await stakingManager.save(accounts, events);
 
   // Update list of updated accounts for notification
-  if ((firebaseDB || pusher) && headReached) {
+  if ((firebaseDB || emitterIO || pusher) && headReached) {
     const lastBlockHeader = batch[batch.length - 1].header;
     
     const updatedErc20Accounts = Array.from(tokenHolderManager.tokenHoldersData.values())
@@ -266,21 +254,3 @@ const processBatch = async (batch: Block<Fields>[]) => {
   }
   
 };
-
-// TODO: remove pusher
-async function pushMessage(data: NewBlockData) {
-  if (!data.updatedContracts.length 
-    && !data.updatedAccounts.REEF20Transfers.length 
-    && !data.updatedAccounts.REEF721Transfers.length 
-    && !data.updatedAccounts.REEF1155Transfers.length 
-    && !data.updatedAccounts.boundEvm.length
-  ) {
-    return;
-  }
-
-  try {
-    await pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
-  } catch (e) {
-    ctx.log.error(`Pusher error: ${e}`);
-  }
-}

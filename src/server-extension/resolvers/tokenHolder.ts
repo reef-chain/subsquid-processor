@@ -3,28 +3,18 @@ import { Arg, Field, InputType, Mutation, ObjectType, Query, Resolver } from 'ty
 import { EntityManager, In } from 'typeorm'
 import { Account, TokenHolder, TokenHolderType, VerifiedContract } from '../../model';
 import { NewBlockData } from "../../interfaces/interfaces";
-import { FirebaseDB } from '../../firebase/firebase';
+import { FirebaseDB } from '../../emitter/firebase';
+import { EmitterIO } from '../../emitter/emitter-io';
+import { Pusher } from '../../emitter/pusher';
 
-// TODO: remove pusher
-import Pusher from "pusher";
-let pusher: Pusher;
-const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
-const PUSHER_EVENT = process.env.PUSHER_EVENT;
-if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
-  pusher = new Pusher({
-    appId: process.env.PUSHER_APP_ID!,
-    key: process.env.PUSHER_KEY!,
-    secret: process.env.PUSHER_SECRET!,
-    cluster: process.env.PUSHER_CLUSTER || "eu",
-    useTLS: true
-  });
-  console.log('Pusher enabled for API: true');
-} else {
-  console.log('Pusher enabled for API: false');
-}
+const firebaseDB = process.env.FIREBASE_EMITTER_ENABLED === 'true' ? new FirebaseDB() : null;
+console.log(`    API - FirebaseDB emitter enabled: ${!!firebaseDB}`);
 
-const firebaseDB = process.env.NOTIFY_NEW_BLOCKS === 'true' ? new FirebaseDB() : null;
-console.log(`Notify new blocks for API: ${!!firebaseDB}`);
+const emitterIO = process.env.EMITTER_IO_ENABLED === 'true' ? new EmitterIO() : null;
+console.log(`    API - EmitterIO emitter enabled: ${!!emitterIO}`);
+
+const pusher = process.env.PUSHER_ENABLED === 'true' ? new Pusher() : null;
+console.log(`    API - Pusher enabled: ${!!pusher}`);
 
 @InputType()
 export class TokenHolderInput {
@@ -108,7 +98,7 @@ export class TokenHolderResolver {
 
     await manager.save(entities);
 
-    if (firebaseDB || pusher) {
+    if (firebaseDB || pusher || emitterIO) {
       const updatedErc20Accounts = entities
         .filter(t => t.token.type === 'ERC20' && t.signer && t.signer.id !== '')
         .map(t => t.signer!.id as string)
@@ -142,9 +132,8 @@ export class TokenHolderResolver {
       };
 
       if (firebaseDB) firebaseDB.notifyBlock(data);
-
-      // TODO: remove pusher
-      if (pusher) pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
+      if (emitterIO) emitterIO.notifyBlock(data);
+      if (pusher) pusher.notifyBlock(data);
     }
 
     return true;
