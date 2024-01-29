@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: reef-explorer
-version: 9
+version: 11
 description: |-
   Reef Chain explorer data
 
@@ -14,21 +14,29 @@ deploy:
       NETWORK:
         mainnet
       HEAD_REACHED:
-        true
+        false
       PIN_TO_IPFS:
         false
-      NOTIFY_NEW_BLOCKS:
-        true
       USE_ONLY_RPC:
         false
       SUPPORT_HOT_BLOCKS:
         true
+      UPDATE_FROM_HEAD_BATCH_SIZE:
+        100
+      PROCESSOR_BATCH_SIZE:
+        1000
+      REEFSWAP_ROUTER_ADDRESS_MAINNET:
+        "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+      FIREBASE_EMITTER_ENABLED:
+        false
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
-      REEFSWAP_ROUTER_ADDRESS_MAINNET:
-        "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+      EMITTER_IO_ENABLED:
+        false
+      EMITTER_IO_URL:
+        http://events.reefscan.info:8080
       PUSHER_ENABLED:
         false
       PUSHER_APP_ID:
@@ -48,12 +56,16 @@ deploy:
         mainnet
       SQUID_NAME:
         reef-explorer
-      NOTIFY_NEW_BLOCKS:
-        true
+      FIREBASE_EMITTER_ENABLED:
+        false
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
+      EMITTER_IO_ENABLED:
+        false
+      EMITTER_IO_URL:
+        http://events.reefscan.info:8080
       PUSHER_ENABLED:
         false
       PUSHER_APP_ID:
@@ -81,9 +93,13 @@ deploy:
     - PUSHER_SECRET
     - FIREBASE_CLIENT_EMAIL
     - FIREBASE_PK
+    - EMITTER_IO_KEY
 
 scale:
   dedicated: true
   addons:
     postgres:
       storage: 100Gi
+      profile: medium
+  processor:
+    profile: medium

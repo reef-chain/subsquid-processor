@@ -1,5 +1,5 @@
 import { Store, TypeormDatabase } from "@subsquid/typeorm-store";
-import { DataHandlerContext, SubstrateBatchProcessor } from "@subsquid/substrate-processor";
+import { Block, DataHandlerContext, SubstrateBatchProcessor } from "@subsquid/substrate-processor";
 import { KnownArchives, lookupArchive } from "@subsquid/archive-registry";
 import { NewBlockData } from "./interfaces/interfaces";
 import { AccountManager } from "./process/accountManager";
@@ -14,25 +14,9 @@ import { StakingManager } from "./process/stakingManager";
 import { updateFromHead } from "./process/updateFromHead";
 import { hexToNativeAddress, REEF_CONTRACT_ADDRESS } from "./util/util";
 import { Account, Extrinsic, VerifiedContract } from "./model";
-import { FirebaseDB } from "./firebase/firebase";
-
-// TODO: remove pusher
-import Pusher from "pusher";
-let pusher: Pusher;
-const PUSHER_CHANNEL = process.env.PUSHER_CHANNEL;
-const PUSHER_EVENT = process.env.PUSHER_EVENT;
-if (process.env.PUSHER_ENABLED === 'true' && PUSHER_CHANNEL && PUSHER_EVENT) {
-  pusher = new Pusher({
-    appId: process.env.PUSHER_APP_ID!,
-    key: process.env.PUSHER_KEY!,
-    secret: process.env.PUSHER_SECRET!,
-    cluster: process.env.PUSHER_CLUSTER || "eu",
-    useTLS: true
-  });
-  console.log('    Pusher enabled: true');
-} else {
-  console.log('    Pusher enabled: false');
-}
+import { FirebaseDB } from "./emitter/firebase";
+import { Pusher } from "./emitter/pusher";
+import { EmitterIO } from "./emitter/emitter-io";
 
 const network = process.env.NETWORK;
 if (!network) {
@@ -46,6 +30,7 @@ export const SUPPORT_HOT_BLOCKS = process.env.SUPPORT_HOT_BLOCKS === 'true';
 const ARCHIVE = USE_ONLY_RPC ? undefined : lookupArchive(AQUARIUM_ARCHIVE_NAME, { release: 'ArrowSquid' });
 const START_BLOCK = parseInt(process.env.START_BLOCK || '0');
 export const REEFSWAP_ROUTER_ADDRESS = process.env[`REEFSWAP_ROUTER_ADDRESS_${network.toUpperCase()}`];
+const BATCH_SIZE = parseInt(process.env.PROCESSOR_BATCH_SIZE || '1000');
 console.log(`
     Network: ${network}
     RPC URL: ${RPC_URL}
@@ -53,6 +38,7 @@ console.log(`
     Archive: ${USE_ONLY_RPC ? 'None' : ARCHIVE}
     Support hot blocks: ${SUPPORT_HOT_BLOCKS}
     Start block: ${START_BLOCK}
+    Batch size: ${BATCH_SIZE}
 `);
 
 const database = new TypeormDatabase({supportHotBlocks: SUPPORT_HOT_BLOCKS});
@@ -103,19 +89,29 @@ console.log(`    Pin to IPFS: ${pinToIPFSEnabled}`);
 let isFirstBatch = true;
 let newBlockData: NewBlockData;
 
-const firebaseDB = process.env.NOTIFY_NEW_BLOCKS === 'true' ? new FirebaseDB() : null;
-console.log(`    Notify new blocks: ${!!firebaseDB}`);
+const firebaseDB = process.env.FIREBASE_EMITTER_ENABLED === 'true' ? new FirebaseDB() : null;
+console.log(`    FirebaseDB emitter enabled: ${!!firebaseDB}`);
+
+const emitterIO = process.env.EMITTER_IO_ENABLED === 'true' ? new EmitterIO() : null;
+console.log(`    EmitterIO emitter enabled: ${!!emitterIO}`);
+
+const pusher = process.env.PUSHER_ENABLED === 'true' ? new Pusher() : null;
+console.log(`    Pusher enabled: ${!!pusher}`);
 
 processor.run(database, async (ctx_) => {
   ctx = ctx_;
-
-  // Push data from previous batch
-  if (firebaseDB && newBlockData) {
-    firebaseDB.notifyBlock(newBlockData);
+  for (let i = 0; i < ctx.blocks.length; i += BATCH_SIZE) {
+    const batch =  ctx.blocks.slice(i, i + BATCH_SIZE);
+    await processBatch(batch);
   }
-  // TODO: remove pusher
-  if (pusher && newBlockData) {
-    pushMessage(newBlockData);
+});
+
+const processBatch = async (batch: Block<Fields>[]) => {
+  // Push data from previous batch
+  if (newBlockData) {
+    if (firebaseDB) firebaseDB.notifyBlock(newBlockData);
+    if (emitterIO) emitterIO.notifyBlock(newBlockData);
+    if (pusher) pusher.notifyBlock(newBlockData);
   }
 
   // Initialize global variables in first batch
@@ -155,11 +151,11 @@ processor.run(database, async (ctx_) => {
   const transferManager: TransferManager = new TransferManager(tokenHolderManager);
   const accountManager = new AccountManager(tokenHolderManager, transferManager);
 
-  if (ctx.blocks.length > 1) ctx.log.debug(`Batch size: ${ctx.blocks.length}`);
+  if (batch.length > 1) ctx.log.debug(`Batch size: ${batch.length}`);
 
   // Process blocks
-  for (const block of ctx.blocks) {
-    if (!headReached && ctx.isHead) {
+  for (const block of batch) {
+    if (!headReached && ctx.isHead && block.header.height === ctx.blocks[ctx.blocks.length - 1].header.height) {
       headReached = true;
       await updateFromHead(block.header);
     }
@@ -170,18 +166,18 @@ processor.run(database, async (ctx_) => {
 
     for (const event of block.events) {
       if (event.phase === "ApplyExtrinsic") {
-        const feeAmount = await extrinsicManager.process(event);
+        const signedData = await extrinsicManager.process(event);
         eventManager.process(event);
 
         switch (event.name) {
           case 'EVM.Log':
-            await evmEventManager.process(event, feeAmount, transferManager, accountManager, ctx.store);
+            await evmEventManager.process(event, signedData, transferManager, accountManager, ctx.store);
             break;
           case 'EVM.Created':
             await contractManager.process(event);
             break;
           case 'EVM.ExecutedFailed':
-            await evmEventManager.process(event, feeAmount, transferManager, accountManager);
+            await evmEventManager.process(event, signedData, transferManager, accountManager);
             break;
 
           case 'EvmAccounts.ClaimAccount':
@@ -198,7 +194,7 @@ processor.run(database, async (ctx_) => {
             await accountManager.process(addressReserved, block.header);
             break;
           case 'Balances.Transfer':
-            await transferManager.process(event, accountManager, reefVerifiedContract, feeAmount, true);
+            await transferManager.process(event, accountManager, reefVerifiedContract, signedData, true);
             break;
 
           case 'Staking.Rewarded':
@@ -215,20 +211,20 @@ processor.run(database, async (ctx_) => {
   }
 
   // Save data to database
-  ctx.log.info(`Saving blocks from ${ctx.blocks[0].header.height} to ${ctx.blocks[ctx.blocks.length - 1].header.height}`);
+  ctx.log.info(`Saving blocks from ${batch[0].header.height} to ${batch[batch.length - 1].header.height}`);
   const blocks = await blockManager.save();
   const extrinsics = await extrinsicManager.save(blocks);
   const events = await eventManager.save(blocks, extrinsics);
   const accounts = await accountManager.save(blocks);
   await contractManager.save(accounts, extrinsics);
-  await evmEventManager.save(blocks, events);
-  await transferManager.save(blocks, extrinsics, accounts, events);
+  await evmEventManager.save();
+  await transferManager.save(accounts);
   await tokenHolderManager.save(accounts);
   await stakingManager.save(accounts, events);
 
   // Update list of updated accounts for notification
-  if ((firebaseDB || pusher) && headReached) {
-    const lastBlockHeader = ctx.blocks[ctx.blocks.length - 1].header;
+  if ((firebaseDB || emitterIO || pusher) && headReached) {
+    const lastBlockHeader = batch[batch.length - 1].header;
     
     const updatedErc20Accounts = Array.from(tokenHolderManager.tokenHoldersData.values())
       .filter(t => t.token.type === 'ERC20' && t.signerAddress !== '')
@@ -257,22 +253,4 @@ processor.run(database, async (ctx_) => {
     };
   }
   
-});
-
-// TODO: remove pusher
-async function pushMessage(data: NewBlockData) {
-  if (!data.updatedContracts.length 
-    && !data.updatedAccounts.REEF20Transfers.length 
-    && !data.updatedAccounts.REEF721Transfers.length 
-    && !data.updatedAccounts.REEF1155Transfers.length 
-    && !data.updatedAccounts.boundEvm.length
-  ) {
-    return;
-  }
-
-  try {
-    await pusher.trigger(PUSHER_CHANNEL!, PUSHER_EVENT!, data);
-  } catch (e) {
-    ctx.log.error(`Pusher error: ${e}`);
-  }
-}
+};

@@ -1,15 +1,10 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_, ManyToOne as ManyToOne_} from "typeorm"
 import * as marshal from "./marshal"
-import {Block} from "./block.model"
-import {Extrinsic} from "./extrinsic.model"
-import {Event} from "./event.model"
 import {Account} from "./account.model"
 import {VerifiedContract} from "./verifiedContract.model"
 import {TransferType} from "./_transferType"
 import {ReefswapAction} from "./_reefswapAction"
 
-@Index_(["id", "extrinsic"], {unique: true})
-@Index_(["id", "event"], {unique: true})
 @Entity_()
 export class Transfer {
     constructor(props?: Partial<Transfer>) {
@@ -20,16 +15,31 @@ export class Transfer {
     id!: string
 
     @Index_()
-    @ManyToOne_(() => Block, {nullable: true})
-    block!: Block
+    @Column_("int4", {nullable: false})
+    blockHeight!: number
 
     @Index_()
-    @ManyToOne_(() => Extrinsic, {nullable: true})
-    extrinsic!: Extrinsic
+    @Column_("text", {nullable: false})
+    blockHash!: string
 
     @Index_()
-    @ManyToOne_(() => Event, {nullable: true})
-    event!: Event
+    @Column_("bool", {nullable: false})
+    finalized!: boolean
+
+    @Column_("text", {nullable: true})
+    extrinsicId!: string | undefined | null
+
+    @Column_("text", {nullable: true})
+    extrinsicHash!: string | undefined | null
+
+    @Column_("int4", {nullable: false})
+    extrinsicIndex!: number
+
+    @Column_("int4", {nullable: false})
+    eventIndex!: number
+
+    @Column_("jsonb", {nullable: true})
+    signedData!: unknown | undefined | null
 
     @Index_()
     @ManyToOne_(() => Account, {nullable: true})
@@ -60,10 +70,6 @@ export class Transfer {
     @Index_()
     @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
     amount!: bigint
-
-    @Index_()
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    feeAmount!: bigint
 
     @Index_()
     @Column_("text", {nullable: true})

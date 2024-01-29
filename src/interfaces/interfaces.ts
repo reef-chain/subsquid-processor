@@ -84,7 +84,9 @@ export interface ContractData {
 
 export interface EvmEventData {
     id: string;
-    blockId: string;
+    blockHeight: number;
+    blockHash: string;
+    finalized: boolean;
     eventIndex: number;
     extrinsicIndex: number;
     contractAddress: string;
@@ -101,8 +103,13 @@ export interface EvmEventData {
 
 export interface TransferData {
     id: string;
-    blockId: string;
-    extrinsicId: string;
+    blockHeight: number;
+    blockHash: string;
+    finalized: boolean;
+    extrinsicId: string
+    extrinsicHash: string
+    extrinsicIndex: number;
+    signedData: SignedData | unknown | undefined | null;
     toAddress: string;
     fromAddress: string;
     token: VerifiedContract;
@@ -116,7 +123,6 @@ export interface TransferData {
     denom: string | undefined | null;
     nftId: bigint | undefined | null;
     errorMessage: string | undefined | null;
-    feeAmount: bigint;
 };
 
 export interface TokenHolderData {

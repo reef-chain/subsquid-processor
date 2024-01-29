@@ -1,14 +1,14 @@
 import { Event } from "@subsquid/substrate-processor";
 import { AccountManager } from "../accountManager";
-import { TransferData } from "../../interfaces/interfaces";
+import { SignedData, TransferData } from "../../interfaces/interfaces";
 import { TransferType, VerifiedContract } from "../../model";
 import { getErrorMessage, hexToNativeAddress } from "../../util/util";
-import { Fields } from "../../processor";
+import { Fields, SUPPORT_HOT_BLOCKS } from "../../processor";
 
 export const processNativeTransfer = async (
     event: Event<Fields>, 
     contract: VerifiedContract,
-    feeAmount: bigint,
+    signedData: SignedData | null,
     accountManager: AccountManager
 ): Promise<TransferData> => {
     const from = hexToNativeAddress(event.args[0]);
@@ -26,8 +26,13 @@ export const processNativeTransfer = async (
 
     const transferData = {
         id: event.id,
-        blockId: event.block.id,
+        blockHeight: event.block.height,
+        blockHash: event.block.hash,
+        finalized: SUPPORT_HOT_BLOCKS ? false : true,
         extrinsicId: event.extrinsic!.id,
+        extrinsicHash: event.extrinsic!.hash,
+        extrinsicIndex: event.extrinsic!.index,
+        signedData,
         fromAddress: from,
         toAddress: to,
         token: contract,
@@ -40,8 +45,7 @@ export const processNativeTransfer = async (
         timestamp: new Date(event.block.timestamp!),
         denom: 'REEF',
         nftId: null,
-        errorMessage: errorMessage,
-        feeAmount: feeAmount
+        errorMessage: errorMessage
     };
 
     return transferData;
