@@ -36,7 +36,7 @@ deploy:
       EMITTER_IO_ENABLED:
         true
       EMITTER_IO_URL:
-        http://events.reefscan.info:8080
+        https://events.reefscan.info:443
       PUSHER_ENABLED:
         true
       PUSHER_APP_ID:
@@ -65,7 +65,7 @@ deploy:
       EMITTER_IO_ENABLED:
         true
       EMITTER_IO_URL:
-        http://events.reefscan.info:8080
+        https://events.reefscan.info:443
       PUSHER_ENABLED:
         true
       PUSHER_APP_ID:

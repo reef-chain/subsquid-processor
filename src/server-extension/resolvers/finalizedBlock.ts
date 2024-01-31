@@ -16,7 +16,7 @@ export class FinalizedBlockResolver {
     const firstUnfinalizedBlock = await manager.findOneBy(Block, { finalized: false });
     if (!firstUnfinalizedBlock || firstUnfinalizedBlock.height > height) return true;
 
-    const maxUpdateSize = 100;
+    const maxUpdateSize = 1000;
     height = height - firstUnfinalizedBlock.height >= maxUpdateSize ? firstUnfinalizedBlock.height + maxUpdateSize - 1 : height;
 
     // Update blocks
