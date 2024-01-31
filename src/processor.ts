@@ -11,6 +11,7 @@ import { EvmEventManager } from "./process/evmEventManager";
 import { TransferManager } from "./process/transferManager";
 import { TokenHolderManager } from "./process/tokenHolderManager";
 import { StakingManager } from "./process/stakingManager";
+import { StakingElectionManager } from "./process/stakingElectionManager";
 import { updateFromHead } from "./process/updateFromHead";
 import { hexToNativeAddress, REEF_CONTRACT_ADDRESS } from "./util/util";
 import { Account, Extrinsic, VerifiedContract } from "./model";
@@ -148,6 +149,7 @@ const processBatch = async (batch: Block<Fields>[]) => {
   const evmEventManager: EvmEventManager = new EvmEventManager();
   const tokenHolderManager: TokenHolderManager = new TokenHolderManager();
   const stakingManager: StakingManager = new StakingManager();
+  const stakingElectionManager: StakingElectionManager = new StakingElectionManager();
   const transferManager: TransferManager = new TransferManager(tokenHolderManager);
   const accountManager = new AccountManager(tokenHolderManager, transferManager);
 
@@ -200,6 +202,9 @@ const processBatch = async (batch: Block<Fields>[]) => {
           case 'Staking.Rewarded':
             await stakingManager.process(event, accountManager);
             break;
+          case 'Staking.StakingElection':
+            await stakingElectionManager.process(event);
+            break;
 
           case 'System.KilledAccount':
             const address = hexToNativeAddress(event.args);
@@ -221,6 +226,7 @@ const processBatch = async (batch: Block<Fields>[]) => {
   await transferManager.save(accounts);
   await tokenHolderManager.save(accounts);
   await stakingManager.save(accounts, events);
+  await stakingElectionManager.save();
 
   // Update list of updated accounts for notification
   if ((firebaseDB || emitterIO || pusher) && headReached) {
