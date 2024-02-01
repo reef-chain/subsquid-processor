@@ -65,8 +65,8 @@ export class EvmEventResolver {
       SELECT
         ee.id, ee.block_height, ee.block_hash,
         ee.extrinsic_index, ee.data_raw, ee.finalized,
-        ex.timestamp as timestamp, ex.signed_data, ex.id as extrinsic_id,
-        ex.hash as extrinsic_hash
+        ee.timestamp as timestamp, ee.extrinsic_hash as extrinsic_hash,
+        ex.signed_data, ex.id as extrinsic_id
       FROM evm_event as ee
       JOIN event as ev
         ON ev.id = ee.id

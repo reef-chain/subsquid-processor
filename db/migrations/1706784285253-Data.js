@@ -1,5 +1,5 @@
-module.exports = class Data1706713918475 {
-    name = 'Data1706713918475'
+module.exports = class Data1706784285253 {
+    name = 'Data1706784285253'
 
     async up(db) {
         await db.query(`CREATE TABLE "chain_info" ("id" character varying NOT NULL, "count" integer NOT NULL, CONSTRAINT "PK_1b82ce2acbc16bfc7f84bfdc8ff" PRIMARY KEY ("id"))`)
@@ -32,7 +32,7 @@ module.exports = class Data1706713918475 {
         await db.query(`CREATE INDEX "IDX_97862dcc0742e14c96127c78b1" ON "block" ("finalized") `)
         await db.query(`CREATE UNIQUE INDEX "IDX_686a6a7b1f98ed462e769a5fde" ON "block" ("height", "id") `)
         await db.query(`CREATE UNIQUE INDEX "IDX_38b7c6782957e94a618be835ec" ON "block" ("height", "finalized") `)
-        await db.query(`CREATE TABLE "evm_event" ("id" character varying NOT NULL, "block_height" integer NOT NULL, "block_hash" text NOT NULL, "finalized" boolean NOT NULL, "event_index" integer NOT NULL, "extrinsic_index" integer NOT NULL, "contract_address" text NOT NULL, "data_raw" jsonb NOT NULL, "data_parsed" jsonb NOT NULL, "method" text NOT NULL, "type" character varying(10) NOT NULL, "status" character varying(7) NOT NULL, "topic0" text, "topic1" text, "topic2" text, "topic3" text, CONSTRAINT "PK_44bf1b82a2d71af8a303f7cb835" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE TABLE "evm_event" ("id" character varying NOT NULL, "block_height" integer NOT NULL, "block_hash" text NOT NULL, "finalized" boolean NOT NULL, "event_index" integer NOT NULL, "extrinsic_index" integer NOT NULL, "extrinsic_hash" text NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "contract_address" text NOT NULL, "data_raw" jsonb NOT NULL, "data_parsed" jsonb NOT NULL, "method" text NOT NULL, "type" character varying(10) NOT NULL, "status" character varying(7) NOT NULL, "topic0" text, "topic1" text, "topic2" text, "topic3" text, CONSTRAINT "PK_44bf1b82a2d71af8a303f7cb835" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_984c8dc973c7430469957d11c5" ON "evm_event" ("block_height") `)
         await db.query(`CREATE INDEX "IDX_bd1b76ca48ceb6dfe5cb9c5ddd" ON "evm_event" ("block_hash") `)
         await db.query(`CREATE INDEX "IDX_43babdb763a528214bd9d7b9a8" ON "evm_event" ("finalized") `)
@@ -80,6 +80,9 @@ module.exports = class Data1706713918475 {
         await db.query(`CREATE INDEX "IDX_6ee1999545992b2cd1ba1f1f65" ON "staking" ("signer_id") `)
         await db.query(`CREATE INDEX "IDX_c4f2c390140b9ff847dae45002" ON "staking" ("event_id") `)
         await db.query(`CREATE INDEX "IDX_e837120901fd17225e43f7d421" ON "staking" ("type") `)
+        await db.query(`CREATE TABLE "era_validator_info" ("id" character varying NOT NULL, "address" text NOT NULL, "era" integer NOT NULL, "total" numeric NOT NULL, "own" numeric NOT NULL, "others" jsonb NOT NULL, "others_who" text NOT NULL, CONSTRAINT "PK_8a494e2a4a4400b9297e2a6bec8" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE INDEX "IDX_dfd7ca31da5e222e785d0fbdfb" ON "era_validator_info" ("address") `)
+        await db.query(`CREATE INDEX "IDX_b827257aebfcc2d4eb76572d17" ON "era_validator_info" ("era") `)
         await db.query(`ALTER TABLE "event" ADD CONSTRAINT "FK_129efedcb305c80256db2d57a59" FOREIGN KEY ("extrinsic_id") REFERENCES "extrinsic"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "event" ADD CONSTRAINT "FK_2b0d35d675c4f99751855c45021" FOREIGN KEY ("block_id") REFERENCES "block"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "account" ADD CONSTRAINT "FK_d9c630ee6c2f1bcc56e46bab5a8" FOREIGN KEY ("block_id") REFERENCES "block"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
@@ -410,6 +413,9 @@ module.exports = class Data1706713918475 {
         await db.query(`DROP INDEX "public"."IDX_6ee1999545992b2cd1ba1f1f65"`)
         await db.query(`DROP INDEX "public"."IDX_c4f2c390140b9ff847dae45002"`)
         await db.query(`DROP INDEX "public"."IDX_e837120901fd17225e43f7d421"`)
+        await db.query(`DROP TABLE "era_validator_info"`)
+        await db.query(`DROP INDEX "public"."IDX_dfd7ca31da5e222e785d0fbdfb"`)
+        await db.query(`DROP INDEX "public"."IDX_b827257aebfcc2d4eb76572d17"`)
         await db.query(`ALTER TABLE "event" DROP CONSTRAINT "FK_129efedcb305c80256db2d57a59"`)
         await db.query(`ALTER TABLE "event" DROP CONSTRAINT "FK_2b0d35d675c4f99751855c45021"`)
         await db.query(`ALTER TABLE "account" DROP CONSTRAINT "FK_d9c630ee6c2f1bcc56e46bab5a8"`)
