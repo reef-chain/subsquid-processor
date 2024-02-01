@@ -2,6 +2,7 @@ import { BlockHeader, Event } from "@subsquid/substrate-processor";
 import { EraValidatorInfo, IndividualExposure } from "../model";
 import { ctx, Fields } from "../processor";
 import { staking } from "../types/storage";
+import { hexToNativeAddress } from "../util/util";
 
 export class StakingElectionManager {  
     eraValidatorInfos: EraValidatorInfo[] = [];
@@ -13,12 +14,14 @@ export class StakingElectionManager {
         const erasStakersClipped = await this.getStakingErasStakersClipped(event.block, currentEra);
         if (!erasStakersClipped) return;
 
-        erasStakersClipped.forEach(async ([[, address], exposure]) => {
+        erasStakersClipped.forEach(async ([[, hexAddress], exposure]) => {
             if (!exposure) return;
+
+            const address = hexToNativeAddress(hexAddress);
             const { others: othersTemp, own, total } = exposure;
 
             const others = othersTemp.map(({ value, who }) => new IndividualExposure({
-              who: who,
+              who: hexToNativeAddress(who),
               value: value.toString()
             }))
         

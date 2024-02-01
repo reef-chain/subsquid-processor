@@ -201,6 +201,7 @@ type Staking @entity {
 }
 
 type EraValidatorInfo @entity {
+  "<eventId>-<address>"
   id: ID!
   address: String! @index
   era: Int! @index
