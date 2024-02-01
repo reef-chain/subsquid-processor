@@ -4,7 +4,7 @@ type ChainInfo @entity {
   count: Int!
 }
 
-type Block @entity @index(fields: ["height", "id"], unique: true) {
+type Block @entity @index(fields: ["height", "id"], unique: true) @index(fields: ["height", "finalized"], unique: true) {
   "000000..00<blockNum>-<shorthash>"
   id: ID!
   height: Int! @index @unique

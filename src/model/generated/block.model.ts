@@ -4,6 +4,7 @@ import {Event} from "./event.model"
 import {Account} from "./account.model"
 
 @Index_(["height", "id"], {unique: true})
+@Index_(["height", "finalized"], {unique: true})
 @Entity_()
 export class Block {
     constructor(props?: Partial<Block>) {
