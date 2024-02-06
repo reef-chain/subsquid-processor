@@ -16,9 +16,9 @@ deploy:
       NETWORK:
         testnet
       HEAD_REACHED:
-        false
+        true
       PIN_TO_IPFS:
-        false
+        true
       USE_ONLY_RPC:
         true
       SUPPORT_HOT_BLOCKS:
@@ -30,17 +30,17 @@ deploy:
       REEFSWAP_ROUTER_ADDRESS_TESTNET:
         "0x614b7B6382524C32dDF4ff1f4187Bc0BAAC1ed11"
       FIREBASE_EMITTER_ENABLED:
-        false
+        true
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
       EMITTER_IO_ENABLED:
-        false
+        true
       EMITTER_IO_URL:
         https://events.reefscan.info:443
       PUSHER_ENABLED:
-        false
+        true
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:
@@ -59,17 +59,17 @@ deploy:
       SQUID_NAME:
         reef-explorer-testnet
       FIREBASE_EMITTER_ENABLED:
-        false
+        true
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
       EMITTER_IO_ENABLED:
-        false
+        true
       EMITTER_IO_URL:
         https://events.reefscan.info:443
       PUSHER_ENABLED:
-        false
+        true
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:
