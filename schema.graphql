@@ -95,6 +95,7 @@ type EvmEvent @entity {
   finalized: Boolean! @index
   eventIndex: Int!
   extrinsicIndex: Int!
+  extrinsicHash: String!
   contractAddress: String! @index
   dataRaw: JSON!
   dataParsed: JSON!
@@ -105,6 +106,7 @@ type EvmEvent @entity {
   topic1: String @index
   topic2: String @index
   topic3: String @index
+  timestamp: DateTime!
 }
 
 # ================ Token transfers ========================

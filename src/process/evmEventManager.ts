@@ -65,6 +65,7 @@ export class EvmEventManager {
             finalized: SUPPORT_HOT_BLOCKS ? false : true,
             eventIndex: event.index,
             extrinsicIndex: event.extrinsic!.index,
+            extrinsicHash: event.extrinsic!.hash,
             contractAddress: contractAddress,
             dataRaw: event.args,
             dataParsed: dataParsed,
@@ -74,7 +75,8 @@ export class EvmEventManager {
             topic0: topic0,
             topic1: topic1,
             topic2: topic2,
-            topic3: topic3
+            topic3: topic3,
+            timestamp: new Date(event.block.timestamp!),
         };
 
         this.evmEventsData.push(evmEventData);

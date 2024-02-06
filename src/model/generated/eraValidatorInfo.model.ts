@@ -8,6 +8,9 @@ export class EraValidatorInfo {
         Object.assign(this, props)
     }
 
+    /**
+     * <eventId>-<address>
+     */
     @PrimaryColumn_()
     id!: string
 

@@ -89,6 +89,7 @@ export interface EvmEventData {
     finalized: boolean;
     eventIndex: number;
     extrinsicIndex: number;
+    extrinsicHash: string;
     contractAddress: string;
     dataRaw: any;
     dataParsed: any;
@@ -99,6 +100,7 @@ export interface EvmEventData {
     topic1: string | undefined | null;
     topic2: string | undefined | null;
     topic3: string | undefined | null;
+    timestamp: Date;
 }
 
 export interface TransferData {
