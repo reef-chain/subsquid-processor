@@ -157,7 +157,8 @@ const processBatch = async (batch: Block<Fields>[]) => {
 
   // Process blocks
   for (const block of batch) {
-    if (!headReached && ctx.isHead && block.header.height === ctx.blocks[ctx.blocks.length - 1].header.height) {
+    if (!headReached && ctx.blocks[0].header.height > 1 && ctx.isHead 
+        && block.header.height === ctx.blocks[ctx.blocks.length - 1].header.height) {
       headReached = true;
       await updateFromHead(block.header);
     }

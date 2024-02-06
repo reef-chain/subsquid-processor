@@ -32,6 +32,9 @@ export class EvmEvent {
     @Column_("int4", {nullable: false})
     extrinsicIndex!: number
 
+    @Column_("text", {nullable: false})
+    extrinsicHash!: string
+
     @Index_()
     @Column_("text", {nullable: false})
     contractAddress!: string
@@ -69,4 +72,7 @@ export class EvmEvent {
     @Index_()
     @Column_("text", {nullable: true})
     topic3!: string | undefined | null
+
+    @Column_("timestamp with time zone", {nullable: false})
+    timestamp!: Date
 }
