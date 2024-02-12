@@ -16,7 +16,7 @@ deploy:
       NETWORK:
         mainnet
       HEAD_REACHED:
-        false
+        true
       PIN_TO_IPFS:
         false
       USE_ONLY_RPC:

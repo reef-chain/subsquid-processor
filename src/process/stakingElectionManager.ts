@@ -54,7 +54,13 @@ export class StakingElectionManager {
         const storageErasStakersClippedV5 = staking.erasStakersClipped.v5;
         if (!storageErasStakersClippedV5.is(blockHeader)) return undefined;
 
-        return await storageErasStakersClippedV5.getPairs(blockHeader, currentEra);
+        const pairs = [];
+        const pages = storageErasStakersClippedV5.getPairsPaged(100, blockHeader, currentEra);
+        for await (const page of pages) {
+          pairs.push(...page);
+        }
+
+        return pairs;
     }
 }
 
