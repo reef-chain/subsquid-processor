@@ -3,6 +3,9 @@ import { LessThanOrEqual } from "typeorm";
 import { Arg, Mutation, Resolver } from 'type-graphql'
 import { Block, EvmEvent, Transfer } from '../../model';
 
+const UPDATE_FINALIZED_MAX_SIZE = process.env.UPDATE_FINALIZED_MAX_SIZE 
+  ? parseInt(process.env.UPDATE_FINALIZED_MAX_SIZE) : 1000;
+
 @Resolver()
 export class FinalizedBlockResolver {
   constructor(private tx: () => Promise<EntityManager>) {}
@@ -13,11 +16,11 @@ export class FinalizedBlockResolver {
     console.debug(`FinalizedBlockResolver.newFinalizedBlock: ${height}`);
     const manager = await this.tx();
 
-    const firstUnfinalizedBlock = await manager.findOneBy(Block, { finalized: false });
+    const firstUnfinalizedBlock = await manager.findOne(Block, { where: { finalized: false }, order: { height: 'ASC' } });
     if (!firstUnfinalizedBlock || firstUnfinalizedBlock.height > height) return true;
 
-    const maxUpdateSize = 1000;
-    height = height - firstUnfinalizedBlock.height >= maxUpdateSize ? firstUnfinalizedBlock.height + maxUpdateSize - 1 : height;
+    height = (height - firstUnfinalizedBlock.height) >= UPDATE_FINALIZED_MAX_SIZE 
+      ? firstUnfinalizedBlock.height + UPDATE_FINALIZED_MAX_SIZE - 1 : height;
 
     // Update blocks
     await manager.update(

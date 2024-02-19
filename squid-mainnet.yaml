@@ -4,7 +4,7 @@ version: 12
 description: |-
   Reef Chain explorer data
 
-# squid-reef@2.1.0
+# squid-reef@2.1.1
 
 build:
 
@@ -80,6 +80,8 @@ deploy:
         reef-chain
       PUSHER_EVENT:
         block-finalised
+      UPDATE_FINALIZED_MAX_SIZE:
+        1000
     cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
   secrets:
     - NODE_RPC_WS_MAINNET

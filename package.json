@@ -1,6 +1,6 @@
 {
   "name": "squid-reef",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "scripts": {
     "build": "rm -rf lib && tsc",
     "update": "npx npm-check-updates --filter /subsquid/ --upgrade && npm i -f",
