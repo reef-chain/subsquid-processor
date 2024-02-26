@@ -1,10 +1,10 @@
 manifestVersion: subsquid.io/v0.1
 name: reef-explorer
-version: 12
+version: 13
 description: |-
   Reef Chain explorer data
 
-# squid-reef@2.1.1
+# squid-reef@2.1.2
 
 build:
 
@@ -16,7 +16,7 @@ deploy:
       NETWORK:
         mainnet
       HEAD_REACHED:
-        true
+        false
       PIN_TO_IPFS:
         false
       USE_ONLY_RPC:

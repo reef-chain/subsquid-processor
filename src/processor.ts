@@ -168,7 +168,8 @@ const processBatch = async (batch: Block<Fields>[]) => {
     ctx.log.debug(`Processing block ${block.header.height}`);
 
     for (const event of block.events) {
-      if (event.phase === "Initialization" && event.name === 'Staking.StakingElection') {
+      if (event.phase === "Initialization" && 
+          (event.name === 'Staking.StakingElection' || event.name === 'Staking.StakersElected') ) {
         await stakingElectionManager.process(event);
       } else if (event.phase === "ApplyExtrinsic") {
         const signedData = await extrinsicManager.process(event);

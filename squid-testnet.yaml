@@ -4,7 +4,7 @@ version: 11
 description: |-
   Reef Chain testnet explorer data
 
-# squid-reef@2.1.1
+# squid-reef@2.1.2
 
 build:
 
