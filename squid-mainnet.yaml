@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: reef-explorer
-version: 13
+version: 15
 description: |-
   Reef Chain explorer data
 
@@ -18,7 +18,7 @@ deploy:
       HEAD_REACHED:
         false
       PIN_TO_IPFS:
-        false
+        true
       USE_ONLY_RPC:
         false
       SUPPORT_HOT_BLOCKS:
@@ -36,7 +36,7 @@ deploy:
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
       EMITTER_IO_ENABLED:
-        false
+        true
       EMITTER_IO_URL:
         https://events.reefscan.info:443
       PUSHER_ENABLED:
@@ -65,7 +65,7 @@ deploy:
       FIREBASE_DB_URL:
         https://reef-block-index-default-rtdb.firebaseio.com/
       EMITTER_IO_ENABLED:
-        false
+        true
       EMITTER_IO_URL:
         https://events.reefscan.info:443
       PUSHER_ENABLED:
@@ -100,10 +100,10 @@ deploy:
     - EMITTER_IO_KEY
 
 scale:
-  dedicated: false
+  dedicated: true
   addons:
     postgres:
       storage: 100Gi
-      profile: medium
+      profile: small
   # processor:
   #   profile: medium

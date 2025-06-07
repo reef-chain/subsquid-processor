@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: reef-explorer-testnet
-version: 11
+version: 15
 description: |-
   Reef Chain testnet explorer data
 
@@ -16,7 +16,7 @@ deploy:
       NETWORK:
         testnet
       HEAD_REACHED:
-        true
+        false
       PIN_TO_IPFS:
         true
       USE_ONLY_RPC:
@@ -30,7 +30,7 @@ deploy:
       REEFSWAP_ROUTER_ADDRESS_TESTNET:
         "0x614b7B6382524C32dDF4ff1f4187Bc0BAAC1ed11"
       FIREBASE_EMITTER_ENABLED:
-        true
+        false
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:
@@ -40,7 +40,7 @@ deploy:
       EMITTER_IO_URL:
         https://events.reefscan.info:443
       PUSHER_ENABLED:
-        true
+        false
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:
@@ -59,7 +59,7 @@ deploy:
       SQUID_NAME:
         reef-explorer-testnet
       FIREBASE_EMITTER_ENABLED:
-        true
+        false
       FIREBASE_PROJECT_ID:
         reef-block-index
       FIREBASE_DB_URL:
@@ -69,7 +69,7 @@ deploy:
       EMITTER_IO_URL:
         https://events.reefscan.info:443
       PUSHER_ENABLED:
-        true
+        false
       PUSHER_APP_ID:
         1629403
       PUSHER_KEY:
@@ -82,7 +82,7 @@ deploy:
         block-finalised-testnet
       UPDATE_FINALIZED_MAX_SIZE:
         1000
-    cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
+    cmd: [ "npx", "squid-graphql-server", "--max-root-fields", "15", "--max-response-size", "1000"]
   secrets:
     - NODE_RPC_WS_MAINNET
     - NODE_RPC_WS_TESTNET
@@ -103,5 +103,5 @@ scale:
   dedicated: false
   addons:
     postgres:
-      storage: 100Gi
-      profile: medium
+      storage: 50Gi
+      profile: small
