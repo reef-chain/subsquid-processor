@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: reef-explorer
-version: 15
+version: 13
 description: |-
   Reef Chain explorer data
 
@@ -18,7 +18,7 @@ deploy:
       HEAD_REACHED:
         false
       PIN_TO_IPFS:
-        true
+        false
       USE_ONLY_RPC:
         false
       SUPPORT_HOT_BLOCKS:
@@ -100,10 +100,10 @@ deploy:
     - EMITTER_IO_KEY
 
 scale:
-  dedicated: true
+  dedicated: false
   addons:
     postgres:
       storage: 100Gi
-      profile: small
-  # processor:
-  #   profile: medium
+      profile: medium
+  processor:
+    profile: medium
