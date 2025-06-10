@@ -161,18 +161,71 @@ const updateErc721Balances = async (blockHeader: BlockHeader<Fields>, tokenHolde
 }
 
 const updateErc1155Balances = async (blockHeader: BlockHeader<Fields>, tokenHolders: TokenHolder[]) => {
-    // TODO: Group by contract and call in batch with `balanceOfBatch` (controlling that the batch size is not too big)
-    await Promise.all(
-        tokenHolders.map((tokenHolder) => {
-            const ownerAddress = tokenHolder.signer?.evmAddress || tokenHolder.evmAddress!;
-            if (!ownerAddress || ownerAddress === '' || ownerAddress === '0x') {
-                tokenHolder.balance = BigInt('0');
-                return Promise.resolve();
+    const validTokenHolders = tokenHolders.filter(tokenHolder => {
+        const ownerAddress = tokenHolder.signer?.evmAddress || tokenHolder.evmAddress!;
+        if (!ownerAddress || ownerAddress === '' || ownerAddress === '0x') {
+            tokenHolder.balance = BigInt('0');
+            return false;
+        }
+        return true;
+    });
+
+    // Group by contract address
+    const contractGroups = new Map<string, TokenHolder[]>();
+    for (const tokenHolder of validTokenHolders) {
+        const contractAddress = tokenHolder.token.id;
+        if (!contractGroups.has(contractAddress)) {
+            contractGroups.set(contractAddress, []);
+        }
+        contractGroups.get(contractAddress)!.push(tokenHolder);
+    }
+
+    // Process each contract group
+    const promises = Array.from(contractGroups.entries()).map(async ([contractAddress, holders]) => {
+        // Control batch size (adjust as needed based on your RPC limits)
+        const MAX_HOLDERS = 25;
+        const contract = new erc1155.Contract(toChainContext(ctx), blockHeader, contractAddress);
+        
+        // Process holders in batches
+        for (let i = 0; i < holders.length; i += MAX_HOLDERS) {
+            const batch = holders.slice(i, i + MAX_HOLDERS);
+            
+            // Prepare batch call parameters
+            const accounts: string[] = [];
+            const tokenIds: bigint[] = [];
+            
+            for (const holder of batch) {
+                const ownerAddress = holder.signer?.evmAddress || holder.evmAddress!;
+                accounts.push(ownerAddress);
+                tokenIds.push(BigInt(holder.nftId!));
             }
-            new erc1155.Contract(toChainContext(ctx), blockHeader, tokenHolder.token.id).balanceOf(ownerAddress, BigInt(tokenHolder.nftId!))
-                .then((balance) => { tokenHolder.balance = BigInt(balance.toString()) });
-        })
-    );
+            
+            try {
+                // Call balanceOfBatch
+                const balances = await contract.balanceOfBatch(accounts, tokenIds);
+                
+                // Update token holder balances
+                for (let j = 0; j < batch.length; j++) {
+                    batch[j].balance = BigInt(balances[j].toString());
+                }
+            } catch (error) {
+                console.error(`Error fetching batch balances for contract ${contractAddress}:`, error);
+                // Fallback to individual calls for this batch
+                await Promise.all(batch.map(async (holder) => {
+                    try {
+                        const ownerAddress = holder.signer?.evmAddress || holder.evmAddress!;
+                        const balance = await contract.balanceOf(ownerAddress, BigInt(holder.nftId!));
+                        holder.balance = BigInt(balance.toString());
+                    } catch (fallbackError) {
+                        console.error(`Error fetching individual balance:`, fallbackError);
+                        holder.balance = BigInt('0');
+                    }
+                }));
+            }
+        }
+    });
+
+    await Promise.all(promises);
 }
 
 // Queries storage and updates database once head block has been reached
