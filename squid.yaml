@@ -1,0 +1,108 @@
+manifestVersion: subsquid.io/v0.1
+name: reef-explorer
+version: 13
+description: |-
+  Reef Chain explorer data
+
+# squid-reef@2.1.2
+
+build:
+
+deploy:
+  addons:
+    postgres:
+  processor:
+    env:
+      NETWORK:
+        mainnet
+      HEAD_REACHED:
+        true
+      PIN_TO_IPFS:
+        false
+      USE_ONLY_RPC:
+        false
+      SUPPORT_HOT_BLOCKS:
+        true
+      UPDATE_FROM_HEAD_BATCH_SIZE:
+        100
+      PROCESSOR_BATCH_SIZE:
+        1000
+      REEFSWAP_ROUTER_ADDRESS_MAINNET:
+        "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+      FIREBASE_EMITTER_ENABLED:
+        false
+      FIREBASE_PROJECT_ID:
+        reef-block-index
+      FIREBASE_DB_URL:
+        https://reef-block-index-default-rtdb.firebaseio.com/
+      EMITTER_IO_ENABLED:
+        true
+      EMITTER_IO_URL:
+        https://events.reefscan.info:443
+      PUSHER_ENABLED:
+        false
+      PUSHER_APP_ID:
+        1629403
+      PUSHER_KEY:
+        fc5ad78eb31981de6c67
+      PUSHER_CLUSTER:
+        eu
+      PUSHER_CHANNEL:
+        reef-chain
+      PUSHER_EVENT:
+        block-finalised
+    cmd: [ "node", "lib/processor" ]
+  api:
+    env:
+      NETWORK:
+        mainnet
+      SQUID_NAME:
+        reef-explorer
+      FIREBASE_EMITTER_ENABLED:
+        false
+      FIREBASE_PROJECT_ID:
+        reef-block-index
+      FIREBASE_DB_URL:
+        https://reef-block-index-default-rtdb.firebaseio.com/
+      EMITTER_IO_ENABLED:
+        true
+      EMITTER_IO_URL:
+        https://events.reefscan.info:443
+      PUSHER_ENABLED:
+        false
+      PUSHER_APP_ID:
+        1629403
+      PUSHER_KEY:
+        fc5ad78eb31981de6c67
+      PUSHER_CLUSTER:
+        eu
+      PUSHER_CHANNEL:
+        reef-chain
+      PUSHER_EVENT:
+        block-finalised
+      UPDATE_FINALIZED_MAX_SIZE:
+        1000
+    cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
+  secrets:
+    - NODE_RPC_WS_MAINNET
+    - NODE_RPC_WS_TESTNET
+    - ARCHIVE_LOOKUP_NAME_MAINNET
+    - ARCHIVE_LOOKUP_NAME_TESTNET
+    - JWT_SECRET
+    - INFURA_IPFS_PROJECT_ID
+    - INFURA_IPFS_KEY
+    - APIKEY_REEF_BRIDGE
+    - FIREBASE_CLIENT_EMAIL
+    - FIREBASE_PK
+    - PUSHER_SECRET
+    - FIREBASE_CLIENT_EMAIL
+    - FIREBASE_PK
+    - EMITTER_IO_KEY
+
+scale:
+  dedicated: false
+  addons:
+    postgres:
+      profile: small
+  # processor:
+  #   profile: medium
