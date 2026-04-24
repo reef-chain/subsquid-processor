@@ -7,11 +7,11 @@ build:
 
 
 serve:
-	@npx squid-graphql-server
+	@node lib/graphql-server-bootstrap.js
 
 
 migrate:
-	@npx squid-typeorm-migration apply
+	@node db/init.js
 
 
 migration:

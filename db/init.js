@@ -18,7 +18,7 @@ const ormconfig = {
 
 require('typeorm').createConnection(ormconfig).then(async con => {
   try {
-    await con.runMigrations({transaction: 'all'})
+    await con.runMigrations({transaction: 'each'})
   } finally {
     await con.close().catch(err => null)
   }
