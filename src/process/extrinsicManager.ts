@@ -1,7 +1,7 @@
 import { BlockHeader, Event } from "@subsquid/substrate-processor";
 import { ExtrinsicData, SignedData } from "../interfaces/interfaces";
 import { Block, Extrinsic, ExtrinsicStatus, ExtrinsicType } from "../model";
-import { Fields, ctx } from "../processor";
+import { Fields, ctx, headReached } from "../processor";
 import { getFeeDetails, getPaymentInfo } from "../util/extrinsic";
 import { getDocs, getErrorMessage, hexToNativeAddress, toCamelCase } from "../util/util";
 import { DataRawAddress } from "../util/interfaces";
@@ -14,21 +14,23 @@ type SystemEvent_ExtrinsicSuccess = ExtrinsicSuccessV5 | ExtrinsicSuccessV8 | Ex
 
 export class ExtrinsicManager {  
     extrinsicsData: Map<string, ExtrinsicData> = new Map();
+    private systemEventsByBlockHash: Map<string, Promise<EventRecord[] | undefined>> = new Map();
   
     async process(event: Event<Fields>): Promise<SignedData | null> {
         if (this.extrinsicsData.has(event.extrinsic!.id)) {
             return this.extrinsicsData.get(event.extrinsic!.id)!.signedData as SignedData || null;
         }
 
+        const [section, method] = event.extrinsic!.call!.name.split(".");
         let signer = "";
         let signedData = null;
         if (event.extrinsic?.signature?.address) {
             const addressHex = (event.extrinsic!.signature!.address as DataRawAddress).value;
             signer = hexToNativeAddress(addressHex);
-            signedData = await this.getSignedData(event);
+            if (!this.shouldDeferSignedData(section, method)) {
+                signedData = await this.getSignedData(event);
+            }
         }
-            
-        const [section, method] = event.extrinsic!.call!.name.split(".");
 
         let errorMessage = "";
         if (event.extrinsic?.error) {
@@ -84,11 +86,21 @@ export class ExtrinsicManager {
 
     // https://substrate.stackexchange.com/questions/2637/determining-the-final-fee-from-a-client/4224#4224
     private async getSignedData(event: Event<Fields>) {
-        const [fee, feeDetails, systemEvents] = await Promise.all([
-            getPaymentInfo(event, event.block.parentHash),
-            getFeeDetails(event, event.block.parentHash),
-            this.getSystemEvents(event.block)
+        const [feeResult, feeDetailsResult, systemEventsResult] = await Promise.allSettled([
+            this.withTimeout(getPaymentInfo(event, event.block.parentHash), 5000, 'payment_queryInfo', event.extrinsic!.id),
+            this.withTimeout(getFeeDetails(event, event.block.parentHash), 5000, 'payment_queryFeeDetails', event.extrinsic!.id),
+            this.withTimeout(this.getSystemEvents(event.block), 5000, 'System.Events', event.extrinsic!.id)
         ]);
+
+        if (feeResult.status !== 'fulfilled' || feeDetailsResult.status !== 'fulfilled') {
+            return null;
+        }
+
+        const fee = feeResult.value;
+        const feeDetails = feeDetailsResult.value;
+        const systemEvents = systemEventsResult.status === 'fulfilled'
+            ? systemEventsResult.value
+            : undefined;
 
         const baseFee = feeDetails.inclusionFee?.baseFee && BigInt(feeDetails.inclusionFee.baseFee) || BigInt(0);
         const lenFee = feeDetails.inclusionFee?.lenFee && BigInt(feeDetails.inclusionFee.lenFee) || BigInt(0);
@@ -121,12 +133,52 @@ export class ExtrinsicManager {
     }
 
     private async getSystemEvents(blockHeader: BlockHeader<Fields>) {
+        const cacheKey = blockHeader.hash;
+        const cached = this.systemEventsByBlockHash.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
+
+        const request = this.fetchSystemEvents(blockHeader);
+        this.systemEventsByBlockHash.set(cacheKey, request);
+        return request;
+    }
+
+    private async fetchSystemEvents(blockHeader: BlockHeader<Fields>) {
         try {
             // For testnet System.Events is not found in metadata, so call getStorage directly
             return await blockHeader._runtime.getStorage(blockHeader.hash, 'System.Events');
         } catch (error) {
             return undefined;
         }
+    }
+
+    private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string, extrinsicId: string): Promise<T> {
+        let timeoutHandle: NodeJS.Timeout | undefined;
+
+        const timeout = new Promise<never>((_, reject) => {
+            timeoutHandle = setTimeout(() => {
+                reject(new Error(`${label} timed out after ${timeoutMs}ms for extrinsic ${extrinsicId}`));
+            }, timeoutMs);
+        });
+
+        try {
+            return await Promise.race([promise, timeout]);
+        } catch (error) {
+            ctx.log.warn(`${error}`);
+            throw error;
+        } finally {
+            if (timeoutHandle) clearTimeout(timeoutHandle);
+        }
+    }
+
+    private shouldDeferSignedData(section: string, method: string): boolean {
+        if (headReached) return false;
+
+        return (
+            (section === 'Staking' && method === 'payoutStakers') ||
+            (section === 'Utility' && method === 'batch')
+        );
     }
 }
 

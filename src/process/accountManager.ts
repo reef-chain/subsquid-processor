@@ -11,6 +11,16 @@ import { AccountBalances } from "../util/balances/types";
 import { TransferManager } from "./transferManager";
 import { BlockHeader } from "@subsquid/substrate-processor";
 
+const EMPTY_ACCOUNT_BALANCES: AccountBalances = {
+    freeBalance: 0n,
+    lockedBalance: 0n,
+    availableBalance: 0n,
+    reservedBalance: 0n,
+    vestingLocked: 0n,
+    votingBalance: 0n,
+    accountNonce: 0,
+};
+
 export class AccountManager {  
     accountsData: Map<string, AccountData> = new Map();
     tokenHolderManager: TokenHolderManager;
@@ -46,6 +56,46 @@ export class AccountManager {
         if (evmClaim) { await this.updateOnEvmAccountBound(address, accountData.evmAddress); }
 
         return accountData;
+    }
+
+    async preloadAddresses(addresses: string[], blockHeader: BlockHeader<Fields>, active = true): Promise<void> {
+        const uniqueAddresses = [...new Set(addresses)].filter((address) => {
+            if (address === '0x') return false;
+
+            const accountData = this.accountsData.get(address);
+            return !accountData || accountData.blockHeight < blockHeader.height;
+        });
+
+        if (!uniqueAddresses.length) return;
+
+        if (headReached) {
+            await Promise.all(uniqueAddresses.map(address => this.process(address, blockHeader, active)));
+            return;
+        }
+
+        const storageV5 = evmAccounts.evmAddresses.v5;
+        if (!storageV5.is(blockHeader)) {
+            await Promise.all(uniqueAddresses.map(address => this.process(address, blockHeader, active)));
+            return;
+        }
+
+        const addressBytes = uniqueAddresses.map(address => ss58.decode(address).bytes);
+        const evmAddresses = await storageV5.getMany(blockHeader, addressBytes);
+
+        uniqueAddresses.forEach((address, index) => {
+            const accountData = this.buildAccountData(
+                address,
+                blockHeader,
+                active,
+                evmAddresses[index],
+                null,
+                EMPTY_ACCOUNT_BALANCES,
+                0
+            );
+
+            this.accountsData.set(address, accountData);
+            this.tokenHolderManager.process(address, '', accountData.freeBalance, blockHeader.timestamp!, reefVerifiedContract);
+        });
     }
   
     async save(blocks: Map<string, Block>): Promise<Map<string, Account>> {
@@ -231,15 +281,7 @@ export class AccountManager {
     private async getAccountData(address: string, blockHeader: BlockHeader<Fields>, active: boolean): Promise<AccountData> {
         let evmAddr = '';
         let identity = null;
-        let balances: AccountBalances = {
-            freeBalance: 0n,
-            lockedBalance: 0n,
-            availableBalance: 0n,
-            reservedBalance: 0n,
-            vestingLocked: 0n,
-            votingBalance: 0n,
-            accountNonce: 0,
-        };
+        let balances: AccountBalances = EMPTY_ACCOUNT_BALANCES;
         let evmNonce = 0;
 
         const addressBytes = ss58.decode(address).bytes;
@@ -260,6 +302,20 @@ export class AccountManager {
             const evmAddress = await this.getEvmAddress(blockHeader, addressBytes);
             if (evmAddress) { evmAddr = toChecksumAddress(evmAddress) }
         }
+
+        return this.buildAccountData(address, blockHeader, active, evmAddr, identity, balances, evmNonce);
+    }
+
+    private buildAccountData(
+        address: string,
+        blockHeader: BlockHeader<Fields>,
+        active: boolean,
+        evmAddress: string | undefined,
+        identity: any,
+        balances: AccountBalances,
+        evmNonce: number
+    ): AccountData {
+        const evmAddr = evmAddress ? toChecksumAddress(evmAddress) : '';
 
         return {
             id: address,

@@ -164,10 +164,17 @@ const processBatch = async (batch: Block<Fields>[]) => {
     }
 
     blockManager.process(block.header);
+    await stakingManager.preloadRewardData(block.events, block.header, accountManager);
 
     ctx.log.debug(`Processing block ${block.header.height}`);
 
+    let eventIndex = 0;
     for (const event of block.events) {
+      eventIndex += 1;
+      if (block.events.length > 100 && (eventIndex <= 5 || eventIndex % 50 === 0)) {
+        ctx.log.debug(`Block ${block.header.height}: event ${eventIndex}/${block.events.length} (${event.name})`);
+      }
+
       if (event.phase === "Initialization" && 
           (event.name === 'Staking.StakingElection' || event.name === 'Staking.StakersElected') ) {
         await stakingElectionManager.process(event);

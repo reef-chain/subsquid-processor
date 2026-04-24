@@ -82,7 +82,7 @@ deploy:
         block-finalised
       UPDATE_FINALIZED_MAX_SIZE:
         1000
-    cmd: [ "node", "lib/graphql-server-bootstrap.js", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
+    cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
   secrets:
     - NODE_RPC_WS_MAINNET
     - NODE_RPC_WS_TESTNET

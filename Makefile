@@ -7,7 +7,7 @@ build:
 
 
 serve:
-	@node lib/graphql-server-bootstrap.js
+	@npx squid-graphql-server
 
 
 migrate:
