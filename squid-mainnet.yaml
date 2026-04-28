@@ -1,6 +1,6 @@
 manifestVersion: subsquid.io/v0.1
 name: reef-explorer
-version: 14
+version: 13
 description: |-
   Reef Chain explorer data
 
@@ -13,76 +13,52 @@ deploy:
     postgres:
   processor:
     env:
-      NETWORK:
-        mainnet
-      HEAD_REACHED:
-        true
-      PIN_TO_IPFS:
-        false
-      USE_ONLY_RPC:
-        false
-      SUPPORT_HOT_BLOCKS:
-        true
-      UPDATE_FROM_HEAD_BATCH_SIZE:
-        100
-      PROCESSOR_BATCH_SIZE:
-        1000
-      REEFSWAP_ROUTER_ADDRESS_MAINNET:
-        "0x10ED43C718714eb63d5aA57B78B54704E256024E"
-      FIREBASE_EMITTER_ENABLED:
-        false
-      FIREBASE_PROJECT_ID:
-        reef-block-index
-      FIREBASE_DB_URL:
-        https://reef-block-index-default-rtdb.firebaseio.com/
-      EMITTER_IO_ENABLED:
-        true
-      EMITTER_IO_URL:
-        https://events.reefscan.info:443
-      PUSHER_ENABLED:
-        false
-      PUSHER_APP_ID:
-        1629403
-      PUSHER_KEY:
-        fc5ad78eb31981de6c67
-      PUSHER_CLUSTER:
-        eu
-      PUSHER_CHANNEL:
-        reef-chain
-      PUSHER_EVENT:
-        block-finalised
-    cmd: [ "node", "lib/processor" ]
+      NETWORK: mainnet
+      HEAD_REACHED: true
+      PIN_TO_IPFS: false
+      USE_ONLY_RPC: false
+      SUPPORT_HOT_BLOCKS: true
+      UPDATE_FROM_HEAD_BATCH_SIZE: 100
+      PROCESSOR_BATCH_SIZE: 1000
+      REEFSWAP_ROUTER_ADDRESS_MAINNET: "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+      FIREBASE_EMITTER_ENABLED: false
+      FIREBASE_PROJECT_ID: reef-block-index
+      FIREBASE_DB_URL: https://reef-block-index-default-rtdb.firebaseio.com/
+      EMITTER_IO_ENABLED: true
+      EMITTER_IO_URL: https://events.reefscan.info:443
+      PUSHER_ENABLED: false
+      PUSHER_APP_ID: 1629403
+      PUSHER_KEY: fc5ad78eb31981de6c67
+      PUSHER_CLUSTER: eu
+      PUSHER_CHANNEL: reef-chain
+      PUSHER_EVENT: block-finalised
+    cmd: ["node", "lib/processor"]
   api:
     env:
-      NETWORK:
-        mainnet
-      SQUID_NAME:
-        reef-explorer
-      FIREBASE_EMITTER_ENABLED:
-        false
-      FIREBASE_PROJECT_ID:
-        reef-block-index
-      FIREBASE_DB_URL:
-        https://reef-block-index-default-rtdb.firebaseio.com/
-      EMITTER_IO_ENABLED:
-        true
-      EMITTER_IO_URL:
-        https://events.reefscan.info:443
-      PUSHER_ENABLED:
-        false
-      PUSHER_APP_ID:
-        1629403
-      PUSHER_KEY:
-        fc5ad78eb31981de6c67
-      PUSHER_CLUSTER:
-        eu
-      PUSHER_CHANNEL:
-        reef-chain
-      PUSHER_EVENT:
-        block-finalised
-      UPDATE_FINALIZED_MAX_SIZE:
-        1000
-    cmd: [ "npx", "squid-graphql-server", "--subscriptions", "--max-root-fields", "15", "--max-response-size", "1000"]
+      NETWORK: mainnet
+      SQUID_NAME: reef-explorer
+      FIREBASE_EMITTER_ENABLED: false
+      FIREBASE_PROJECT_ID: reef-block-index
+      FIREBASE_DB_URL: https://reef-block-index-default-rtdb.firebaseio.com/
+      EMITTER_IO_ENABLED: true
+      EMITTER_IO_URL: https://events.reefscan.info:443
+      PUSHER_ENABLED: false
+      PUSHER_APP_ID: 1629403
+      PUSHER_KEY: fc5ad78eb31981de6c67
+      PUSHER_CLUSTER: eu
+      PUSHER_CHANNEL: reef-chain
+      PUSHER_EVENT: block-finalised
+      UPDATE_FINALIZED_MAX_SIZE: 1000
+    cmd:
+      [
+        "npx",
+        "squid-graphql-server",
+        "--subscriptions",
+        "--max-root-fields",
+        "15",
+        "--max-response-size",
+        "1000",
+      ]
   secrets:
     - NODE_RPC_WS_MAINNET
     - NODE_RPC_WS_TESTNET
@@ -105,5 +81,3 @@ scale:
     postgres:
       storage: 100Gi
       profile: medium
-  processor:
-    profile: medium
