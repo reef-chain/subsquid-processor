@@ -5,6 +5,8 @@ import {VerifiedContract} from "./verifiedContract.model"
 import {TransferType} from "./_transferType"
 import {ReefswapAction} from "./_reefswapAction"
 
+@Index_(["to", "blockHeight"], {unique: false})
+@Index_(["from", "blockHeight"], {unique: false})
 @Entity_()
 export class Transfer {
     constructor(props?: Partial<Transfer>) {
@@ -41,11 +43,9 @@ export class Transfer {
     @Column_("jsonb", {nullable: true})
     signedData!: unknown | undefined | null
 
-    @Index_()
     @ManyToOne_(() => Account, {nullable: true})
     to!: Account
 
-    @Index_()
     @ManyToOne_(() => Account, {nullable: true})
     from!: Account
 

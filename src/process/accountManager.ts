@@ -1,7 +1,7 @@
-import { Not } from "typeorm";
+import { EntityManager, Not } from "typeorm";
 import * as ss58 from '@subsquid/ss58';
 import { AccountData } from "../interfaces/interfaces";
-import { Account, Block, TokenHolder, TokenHolderType, Transfer } from "../model";
+import { Account, Block, TokenHolder, TokenHolderType, Transfer, VerifiedContract } from "../model";
 import { Fields, ctx, emptyAccount, headReached, reefVerifiedContract } from "../processor";
 import { evmAccounts, evm, identity } from "../types/storage";
 import { extractIdentity, REEF_CONTRACT_ADDRESS, toChecksumAddress } from "../util/util";
@@ -10,6 +10,18 @@ import { getBalancesAccount } from "../util/balances/balances";
 import { AccountBalances } from "../util/balances/types";
 import { TransferManager } from "./transferManager";
 import { BlockHeader } from "@subsquid/substrate-processor";
+
+interface TokenHolderRow {
+    id: string;
+    token_id: string;
+    nft_id: string | null;
+    balance: string;
+    timestamp: Date;
+}
+
+interface EntityIdRow {
+    id: string;
+}
 
 export class AccountManager {  
     accountsData: Map<string, AccountData> = new Map();
@@ -116,34 +128,32 @@ export class AccountManager {
         account: Account, 
         evmAddress: string
     ) => {
-        // Update token holders in DB
-        const tokenHolders = await ctx.store.find(TokenHolder, {
-            where: { evmAddress },
-            relations: { token: true, signer: true }
-        });
-        await ctx.store.remove(tokenHolders);
-        tokenHolders.forEach(tokenHolder => {
-            tokenHolder.evmAddress = "",
-            tokenHolder.signer = account,
-            tokenHolder.type = TokenHolderType.Account
-            tokenHolder.id =  tokenHolder.id.replace(evmAddress, account.id);
-        });
-        await ctx.store.save(tokenHolders);
-    
-        // Update transfers in DB
-        const transfersTo = await ctx.store.find(Transfer, {
-            where: { toEvmAddress: evmAddress },
-            relations: { token: true, from: true, to: true }
-        });
-        transfersTo.forEach(transfer => transfer.to = account);
-        await ctx.store.save(transfersTo);
-    
-        const transfersFrom = await ctx.store.find(Transfer, {
-            where: { fromEvmAddress: evmAddress },
-            relations: { token: true, from: true, to: true }
-        });
-        transfersFrom.forEach(transfer => transfer.from = account);
-        await ctx.store.save(transfersFrom);
+        const manager = this.getEntityManager();
+
+        // Update token holders in DB without loading relations for every row.
+        const tokenHolderRows = await manager.query(
+            `SELECT id, token_id, nft_id, balance, timestamp
+             FROM token_holder
+             WHERE evm_address = $1`,
+            [evmAddress]
+        ) as TokenHolderRow[];
+        if (tokenHolderRows.length > 0) {
+            await ctx.store.remove(TokenHolder, tokenHolderRows.map((tokenHolder) => tokenHolder.id));
+            await ctx.store.save(tokenHolderRows.map((tokenHolder) => new TokenHolder({
+                id: tokenHolder.id.replace(evmAddress, account.id),
+                token: new VerifiedContract({ id: tokenHolder.token_id }),
+                signer: account,
+                evmAddress: "",
+                nftId: tokenHolder.nft_id == null ? null : BigInt(tokenHolder.nft_id),
+                type: TokenHolderType.Account,
+                balance: BigInt(tokenHolder.balance),
+                timestamp: new Date(tokenHolder.timestamp)
+            })));
+        }
+
+        // Update transfers in DB by touching only the foreign key that changed.
+        await this.rebindTransfersToAccount("to_evm_address", "to", evmAddress, account);
+        await this.rebindTransfersToAccount("from_evm_address", "from", evmAddress, account);
     }
         
 
@@ -186,46 +196,31 @@ export class AccountManager {
             }
         });
 
-        // Update token holders in DB
-        const tokenHolders = await ctx.store.find(TokenHolder, {
-            where: { signer: { id: nativeAddress }, token: { id:  Not(REEF_CONTRACT_ADDRESS) } },
-            relations: { token: true, signer: true }
-        });
-        await ctx.store.remove(tokenHolders);
-        tokenHolders.forEach(tokenHolder => {
-            tokenHolder.evmAddress = unboundedEvmAddress,
-            tokenHolder.signer = null
-            tokenHolder.type = TokenHolderType.Contract
-            tokenHolder.id = tokenHolder.id.replace(nativeAddress, unboundedEvmAddress!);
-        });
-        await ctx.store.save(tokenHolders);
-    
-        // Update transfers in DB
-        const transfersTo = await ctx.store.find(Transfer, {
-            where: { to: { id: nativeAddress } },
-            relations: { token: true, from: true, to: true }
-        });
-        transfersTo.forEach(transfer => {
-            if (transfer.token.id === REEF_CONTRACT_ADDRESS && transfer.toEvmAddress !== "") {
-                transfer.toEvmAddress = "";
-            } else if (transfer.token.id !== REEF_CONTRACT_ADDRESS && transfer.to.id !== "0x") {
-                transfer.to = emptyAccount;
-            }
-        });
-        await ctx.store.save(transfersTo);
-    
-        const transfersFrom = await ctx.store.find(Transfer, {
-            where: { from: { id: nativeAddress } },
-            relations: { token: true, from: true, to: true }
-        });
-        transfersFrom.forEach(transfer => {
-            if (transfer.token.id === REEF_CONTRACT_ADDRESS && transfer.toEvmAddress !== "") {
-                transfer.fromEvmAddress = "";
-            } else if (transfer.token.id !== REEF_CONTRACT_ADDRESS && transfer.from.id !== "0x") {
-                transfer.from = emptyAccount;
-            }
-        });
-        await ctx.store.save(transfersFrom);
+        const manager = this.getEntityManager();
+
+        // Update token holders in DB without relation-heavy reads.
+        const tokenHolderRows = await manager.query(
+            `SELECT id, token_id, nft_id, balance, timestamp
+             FROM token_holder
+             WHERE signer_id = $1 AND token_id != $2`,
+            [nativeAddress, REEF_CONTRACT_ADDRESS]
+        ) as TokenHolderRow[];
+        if (tokenHolderRows.length > 0) {
+            await ctx.store.remove(TokenHolder, tokenHolderRows.map((tokenHolder) => tokenHolder.id));
+            await ctx.store.save(tokenHolderRows.map((tokenHolder) => new TokenHolder({
+                id: tokenHolder.id.replace(nativeAddress, unboundedEvmAddress!),
+                token: new VerifiedContract({ id: tokenHolder.token_id }),
+                signer: null,
+                evmAddress: unboundedEvmAddress,
+                nftId: tokenHolder.nft_id == null ? null : BigInt(tokenHolder.nft_id),
+                type: TokenHolderType.Contract,
+                balance: BigInt(tokenHolder.balance),
+                timestamp: new Date(tokenHolder.timestamp)
+            })));
+        }
+
+        await this.clearNativeTransferBindings("to", nativeAddress);
+        await this.clearNativeTransferBindings("from", nativeAddress);
     }
   
     private async getAccountData(address: string, blockHeader: BlockHeader<Fields>, active: boolean): Promise<AccountData> {
@@ -313,6 +308,72 @@ export class AccountManager {
         }
 
         return 0;
+    }
+
+    private getEntityManager(): EntityManager {
+        return (ctx.store as unknown as { em: () => EntityManager }).em();
+    }
+
+    private async rebindTransfersToAccount(
+        addressColumn: "to_evm_address" | "from_evm_address",
+        relation: "to" | "from",
+        evmAddress: string,
+        account: Account
+    ): Promise<void> {
+        const manager = this.getEntityManager();
+        const transferRows = await manager.query(
+            `SELECT id
+             FROM transfer
+             WHERE ${addressColumn} = $1`,
+            [evmAddress]
+        ) as EntityIdRow[];
+        if (transferRows.length === 0) return;
+
+        await ctx.store.save(transferRows.map((transferRow) => {
+            const transfer = new Transfer({ id: transferRow.id });
+            transfer[relation] = account;
+            return transfer;
+        }));
+    }
+
+    private async clearNativeTransferBindings(
+        relation: "to" | "from",
+        nativeAddress: string
+    ): Promise<void> {
+        const manager = this.getEntityManager();
+        const relationColumn = `${relation}_id`;
+        const evmColumn = `${relation}_evm_address`;
+
+        const reefTransfers = await manager.query(
+            `SELECT id
+             FROM transfer
+             WHERE ${relationColumn} = $1
+               AND token_id = $2
+               AND COALESCE(${evmColumn}, '') != ''`,
+            [nativeAddress, REEF_CONTRACT_ADDRESS]
+        ) as EntityIdRow[];
+        if (reefTransfers.length > 0) {
+            await ctx.store.save(reefTransfers.map((transferRow) => {
+                const transfer = new Transfer({ id: transferRow.id });
+                transfer[`${relation}EvmAddress` as "toEvmAddress" | "fromEvmAddress"] = "";
+                return transfer;
+            }));
+        }
+
+        const contractTransfers = await manager.query(
+            `SELECT id
+             FROM transfer
+             WHERE ${relationColumn} = $1
+               AND token_id != $2`,
+            [nativeAddress, REEF_CONTRACT_ADDRESS]
+        ) as EntityIdRow[];
+        if (contractTransfers.length > 0) {
+            await ctx.store.save(contractTransfers.map((transferRow) => {
+                const transfer = new Transfer({ id: transferRow.id });
+                transfer[relation] = emptyAccount;
+                return transfer;
+            }));
+        }
     }
 }
 
