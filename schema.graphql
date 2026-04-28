@@ -111,7 +111,10 @@ type EvmEvent @entity {
 
 # ================ Token transfers ========================
 
-type Transfer @entity {
+type Transfer
+  @entity
+  @index(fields: ["to", "blockHeight"])
+  @index(fields: ["from", "blockHeight"]) {
   id: ID!
   blockHeight: Int! @index
   blockHash: String! @index
@@ -121,8 +124,8 @@ type Transfer @entity {
   extrinsicIndex: Int!
   eventIndex: Int!
   signedData: JSON
-  to: Account!
-  from: Account!
+  to: Account! @index
+  from: Account! @index
   token: VerifiedContract!
   toEvmAddress: String @index
   fromEvmAddress: String @index
