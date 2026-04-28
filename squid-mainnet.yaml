@@ -76,10 +76,10 @@ deploy:
     - EMITTER_IO_KEY
 
 scale:
-  dedicated: true
+  dedicated: false
   addons:
     postgres:
       storage: 100Gi
-      profile: medium
+      profile: small
   # processor:
   #   profile: medium
