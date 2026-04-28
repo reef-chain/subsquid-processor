@@ -24,6 +24,34 @@ if (!network) {
   throw new Error('Network not set in environment.')
 }
 
+const ARCHIVE_QUERY_STRIDE = parseInt(process.env.ARCHIVE_QUERY_STRIDE || '0');
+
+if (ARCHIVE_QUERY_STRIDE > 0) {
+  const archiveModule = require('@subsquid/substrate-processor/lib/ds-archive');
+  const prototype = archiveModule.SubstrateArchive?.prototype;
+
+  if (prototype && !prototype.__reefArchiveStridePatched) {
+    const originalQuery = prototype.query;
+
+    prototype.query = function(req: { range: { from: number, to: number }, request: unknown }) {
+      const to = req?.range?.to;
+      if (typeof to === 'number') {
+        req = {
+          ...req,
+          range: {
+            ...req.range,
+            to: Math.min(to, req.range.from + ARCHIVE_QUERY_STRIDE - 1)
+          }
+        };
+      }
+
+      return originalQuery.call(this, req);
+    };
+
+    prototype.__reefArchiveStridePatched = true;
+  }
+}
+
 const RPC_URL = process.env[`NODE_RPC_WS_${network.toUpperCase()}`];
 const AQUARIUM_ARCHIVE_NAME = process.env[`ARCHIVE_LOOKUP_NAME_${network.toUpperCase()}`] as KnownArchives;
 const USE_ONLY_RPC = process.env.USE_ONLY_RPC === 'true';
@@ -37,6 +65,7 @@ console.log(`
     RPC URL: ${RPC_URL}
     Reefswap Router: ${REEFSWAP_ROUTER_ADDRESS}
     Archive: ${USE_ONLY_RPC ? 'None' : ARCHIVE}
+    Archive query stride: ${ARCHIVE_QUERY_STRIDE || 'default'}
     Support hot blocks: ${SUPPORT_HOT_BLOCKS}
     Start block: ${START_BLOCK}
     Batch size: ${BATCH_SIZE}
