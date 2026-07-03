@@ -97,11 +97,11 @@ module.exports = class Data1706784285253 {
         await db.query(`ALTER TABLE "token_holder" ADD CONSTRAINT "FK_77bdccde4b3585013306c3606fc" FOREIGN KEY ("signer_id") REFERENCES "account"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "staking" ADD CONSTRAINT "FK_6ee1999545992b2cd1ba1f1f657" FOREIGN KEY ("signer_id") REFERENCES "account"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "staking" ADD CONSTRAINT "FK_c4f2c390140b9ff847dae450025" FOREIGN KEY ("event_id") REFERENCES "event"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
-        
+
         // ************************************************************************************************
         //        Scripts inserted manually. Creates functions and triggers, and inserts initial data.
         // ************************************************************************************************
-        
+
         // Create functions
         await db.query(`
             CREATE FUNCTION public.account_count() RETURNS trigger
@@ -439,5 +439,22 @@ module.exports = class Data1706784285253 {
         await db.query(`DROP FUNCTION public.extrinsic_count()`)
         await db.query(`DROP FUNCTION public.new_verified_contract_found()`)
         await db.query(`DROP FUNCTION public.transfer_count()`)
+
+        // *************************************************************************************************************
+        //        Script inserted manually. Modifies the foreign key constraint on the verified_contract table to delete
+        //        the verified contract when the contract is deleted.
+        // *************************************************************************************************************
+        await db.query(`
+            ALTER TABLE "verified_contract"
+            DROP CONSTRAINT IF EXISTS "FK_70c992c058f4f82d658a2cd899c";
+        `);
+
+
+        await db.query(`
+        ALTER TABLE "verified_contract"
+        ADD CONSTRAINT "FK_70c992c058f4f82d658a2cd899c"
+        FOREIGN KEY ("contract_id") REFERENCES "contract"("id")
+        ON DELETE CASCADE ON UPDATE NO ACTION;
+    `);
     }
 }
